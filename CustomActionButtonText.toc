@@ -1,0 +1,11 @@
+## Interface: 110200, 110205, 110207
+## Title: Custom Action Button Text
+## Notes: Customize action bar hotkey text display
+## Notes-zhCN: 自定义动作条热键文本显示
+## Notes-zhTW: 自定義動作條熱鍵文字顯示
+## Author: capzk
+## Version: 0.0.1
+## DefaultState: enabled
+
+Config.lua
+CustomActionButtonText.lua
