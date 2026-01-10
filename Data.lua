@@ -1,4 +1,4 @@
--- Data.lua - 数据解析与持久化模块
+-- Data.lua - 文本解析与序列化
 
 local function DeepCopyTable(tbl)
     if type(tbl) ~= "table" then return tbl end
@@ -59,8 +59,9 @@ local function BuildMappingsFromTable(rawMappings)
         if type(key) == "string" and value ~= nil then
             local normalizedKey = NormalizeKey(key)
             local textValue = tostring(value)
+            local trimmedValue = string.match(textValue, "^%s*(.-)%s*$") or ""
             local disallowed = IsDisallowedKey(normalizedKey)
-            if not disallowed then
+            if not disallowed and trimmedValue ~= "" then
                 normalized[normalizedKey] = textValue
             end
         end
@@ -82,29 +83,70 @@ local function ParseText(text)
     local parsed = {}
     local validCount = 0
     local invalidCount = 0
+    local invalidReasons = {}
+
+    local function StripComments(line)
+        if not line or line == "" then return "" end
+        local earliest
+        local markers = {"#", "//", "--"}
+        for _, marker in ipairs(markers) do
+            local searchStart = 1
+            while true do
+                local pos = string.find(line, marker, searchStart, true)
+                if not pos then break end
+                local prevChar = pos > 1 and string.sub(line, pos - 1, pos - 1) or ""
+                if prevChar == "" or string.match(prevChar, "%s") then
+                    if not earliest or pos < earliest then
+                        earliest = pos
+                    end
+                    break
+                end
+                searchStart = pos + 1
+            end
+        end
+        if earliest then
+            return string.sub(line, 1, earliest - 1)
+        end
+        return line
+    end
 
     for line in string.gmatch(text or "", "[^\r\n]+") do
-        local trimmed = string.match(line, "^%s*(.-)%s*$")
+        local noComments = StripComments(line)
+        local trimmed = string.match(noComments, "^%s*(.-)%s*$")
         if trimmed ~= "" then
             local keyPart, valuePart = string.match(trimmed, "^(.-)%s*=%s*(.+)$")
             if not keyPart then
                 keyPart, valuePart = string.match(trimmed, "^(%S+)%s+(.+)$")
             end
             if keyPart and valuePart then
-                local nKey, nVal = ValidateEntry(keyPart, valuePart)
-                if nKey then
-                    parsed[nKey] = nVal
-                    validCount = validCount + 1
-                else
+                local trimmedVal = string.match(valuePart, "^%s*(.-)%s*$") or ""
+                if trimmedVal == "" then
                     invalidCount = invalidCount + 1
+                    if #invalidReasons < 3 then
+                        table.insert(invalidReasons, string.format("空值: %s", trimmed))
+                    end
+                else
+                    local nKey, nVal = ValidateEntry(keyPart, valuePart)
+                    if nKey then
+                        parsed[nKey] = nVal
+                        validCount = validCount + 1
+                    else
+                        invalidCount = invalidCount + 1
+                        if #invalidReasons < 3 then
+                            table.insert(invalidReasons, string.format("非法键或不允许: %s", trimmed))
+                        end
+                    end
                 end
             else
                 invalidCount = invalidCount + 1
+                if #invalidReasons < 3 then
+                    table.insert(invalidReasons, string.format("格式错误: %s", trimmed))
+                end
             end
         end
     end
 
-    return parsed, validCount, invalidCount
+    return parsed, validCount, invalidCount, invalidReasons
 end
 
 local function SerializeMappings(mappings)

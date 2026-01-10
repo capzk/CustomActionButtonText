@@ -1,26 +1,21 @@
-
---[[
-Custom Action Button Text - 主模块
-使用内置默认或用户数据，自定义动作条按钮上的快捷键文字显示
-]]--
-
 local addonName = "CustomActionButtonText"
-local Data = _G.CustomActionButtonText_Data
 local savedVariableName = "CustomActionButtonTextDB"
+local currentTemplateVersion = 1
+local Data = _G.CustomActionButtonText_Data
 local defaultMappings = {
-    -- 修饰键（用于拼接）
+    -- 修饰键
     ["SHIFT"] = "S+",
     ["CTRL"] = "C+",
     ["ALT"] = "A+",
 
-    -- 鼠标按键（基础/拼接）
+    -- 鼠标按键
     ["MOUSEWHEELUP"] = "MU",
     ["MOUSEWHEELDOWN"] = "MD",
     ["BUTTON3"] = "M3",
     ["BUTTON4"] = "M4",
     ["BUTTON5"] = "M5",
 
-    -- 组合键（优先级最高：精确命中即使用）
+    -- 组合键（精确匹配最高优先级）
     ["SHIFT-MOUSEWHEELUP"] = "SMU",
     ["CTRL-MOUSEWHEELUP"] = "CMU",
     ["ALT-MOUSEWHEELUP"] = "AMU",
@@ -40,16 +35,23 @@ local defaultMappings = {
     ["SHIFT-BUTTON5"] = "SM5",
     ["CTRL-BUTTON5"] = "CM5",
     ["ALT-BUTTON5"] = "AM5",
+
+    -- 修饰键 + 数字/字母示例
+    ["SHIFT-1"] = "S1",
+    ["CTRL-2"] = "C2",
+    ["ALT-3"] = "A3",
+    ["SHIFT-A"] = "SA",
+    ["CTRL-E"] = "CE",
+    ["ALT-R"] = "AR",
 }
 local lastDuplicateWarnings = {}
 local lastDuplicateWarningsCount = 0
 local Hotkeys = _G.CustomActionButtonText_Hotkeys
 
--- 调试统计：记录回退原因
 local debugCounters = {
-    singleDisallowed = 0,        -- 单键/数字/F键被禁止自定义
-    multiModifierDisallowed = 0, -- 多重修饰键被禁止自定义
-    missingMapping = 0,          -- 允许自定义但未找到映射，回退原生
+    singleDisallowed = 0,
+    multiModifierDisallowed = 0,
+    missingMapping = 0,
 }
 
 local function ResetDebugCounters()
@@ -80,10 +82,8 @@ local function TableCount(tbl)
     return c
 end
 
--- 配置映射表（从Config.lua加载）
 local keyMappings = {}
 
--- 标准化键名（统一格式用于匹配）
 local NormalizeKey = Data.NormalizeKey
 local IsDisallowedKey = Data.IsDisallowedKey
 
@@ -121,6 +121,70 @@ local function LoadDefaultMappings()
     return DeepCopyTable(defaultMappings)
 end
 
+local function BuildTemplateText(defaults)
+    local d = defaults or {}
+    local function val(key, fallback)
+        return d[key] or fallback or ""
+    end
+    local lines = {
+        "# 写法说明",
+        "# 每行 KEY = VALUE；空行忽略。注释可用 # // -- ，放行首或行尾。",
+        "# 生效顺序：1) 精确组合匹配；2) 修饰键前缀拼接；3) 原生显示。",
+        "# 允许：修饰键；鼠标键；单修饰+鼠标；单修饰+字母/数字/F键。",
+        "# 不允许：裸字母/数字/F键；多重修饰（CTRL+SHIFT 等）。",
+        "# 保存：Ctrl+S；撤销/重做：Ctrl+Z / Ctrl+Y。",
+        "# 重置：/cabt reset 可恢复默认模板并立即生效（写入存档，可重载保留）。",
+        "#",
+        "# Format guide",
+        "# One rule per line: KEY = VALUE; blank lines ignored. Comments (# // --) allowed head or trailing.",
+        "# Priority: 1) exact combo match; 2) modifier prefix composition; 3) native text.",
+        "# Allowed: modifiers; mouse buttons; single modifier + mouse; single modifier + letter/number/F-key.",
+        "# Not allowed: bare letters/numbers/F-keys; multiple modifiers (CTRL+SHIFT etc.).",
+        "# Save: Ctrl+S; Undo/Redo: Ctrl+Z / Ctrl+Y.",
+        "# Reset: /cabt reset restores default template and saves it (persists across reload).",
+        "# ----------------------------------------------------------------",
+        "# 修饰键（用于拼接）",
+        string.format("SHIFT = %s", val("SHIFT", "S+")),
+        string.format("CTRL = %s", val("CTRL", "C+")),
+        string.format("ALT = %s", val("ALT", "A+")),
+        "",
+        "# 鼠标按键",
+        string.format("MOUSEWHEELUP = %s", val("MOUSEWHEELUP", "MU")),
+        string.format("MOUSEWHEELDOWN = %s", val("MOUSEWHEELDOWN", "MD")),
+        string.format("BUTTON3 = %s", val("BUTTON3", "M3")),
+        string.format("BUTTON4 = %s", val("BUTTON4", "M4")),
+        string.format("BUTTON5 = %s", val("BUTTON5", "M5")),
+        "",
+        "# 修饰键 + 鼠标（精确匹配优先）",
+        string.format("SHIFT-MOUSEWHEELUP = %s", val("SHIFT-MOUSEWHEELUP", "SMU")),
+        string.format("CTRL-MOUSEWHEELUP = %s", val("CTRL-MOUSEWHEELUP", "CMU")),
+        string.format("ALT-MOUSEWHEELUP = %s", val("ALT-MOUSEWHEELUP", "AMU")),
+        string.format("SHIFT-MOUSEWHEELDOWN = %s", val("SHIFT-MOUSEWHEELDOWN", "SMD")),
+        string.format("CTRL-MOUSEWHEELDOWN = %s", val("CTRL-MOUSEWHEELDOWN", "CMD")),
+        string.format("ALT-MOUSEWHEELDOWN = %s", val("ALT-MOUSEWHEELDOWN", "AMD")),
+        string.format("SHIFT-BUTTON3 = %s", val("SHIFT-BUTTON3", "SM3")),
+        string.format("CTRL-BUTTON3 = %s", val("CTRL-BUTTON3", "CM3")),
+        string.format("ALT-BUTTON3 = %s", val("ALT-BUTTON3", "AM3")),
+        string.format("SHIFT-BUTTON4 = %s", val("SHIFT-BUTTON4", "SM4")),
+        string.format("CTRL-BUTTON4 = %s", val("CTRL-BUTTON4", "CM4")),
+        string.format("ALT-BUTTON4 = %s", val("ALT-BUTTON4", "AM4")),
+        string.format("SHIFT-BUTTON5 = %s", val("SHIFT-BUTTON5", "SM5")),
+        string.format("CTRL-BUTTON5 = %s", val("CTRL-BUTTON5", "CM5")),
+        string.format("ALT-BUTTON5 = %s", val("ALT-BUTTON5", "AM5")),
+        "",
+        "# 修饰键 + 字母/数字（示例，可改）",
+        string.format("SHIFT-1 = %s", val("SHIFT-1", "S1")),
+        string.format("CTRL-2 = %s", val("CTRL-2", "C2")),
+        string.format("ALT-3 = %s", val("ALT-3", "A3")),
+        string.format("SHIFT-A = %s", val("SHIFT-A", "SA")),
+        string.format("CTRL-E = %s", val("CTRL-E", "CE")),
+        string.format("ALT-R = %s", val("ALT-R", "AR")),
+        "",
+        "# 按需继续添加 KEY = VALUE，遵守允许范围。",
+    }
+    return table.concat(lines, "\n")
+end
+
 local function SetMappings(normalized, duplicateWarnings, opts)
     opts = opts or {}
     keyMappings = normalized or {}
@@ -145,11 +209,10 @@ local function SetMappings(normalized, duplicateWarnings, opts)
     end
 
     if opts.persist then
-        -- 覆盖式写入，保证每次保存都会替换旧数据
         _G[savedVariableName] = {
             mappings = DeepCopyTable(keyMappings),
-            disabled = nil,
             rawText = opts.rawText,
+            templateVersion = opts.templateVersion or currentTemplateVersion,
         }
     end
 
@@ -162,7 +225,7 @@ end
 
 local function ApplyMappings(rawMappings, opts)
     opts = opts or {}
-    -- UI 层已做逐行校验，这里仅做空表防护和持久化
+    -- 空表防护
     local normalized = DeepCopyTable(rawMappings or {})
     if TableCount(normalized) == 0 then
         if not opts.silent then
@@ -171,10 +234,11 @@ local function ApplyMappings(rawMappings, opts)
         return false, "no_valid_mappings"
     end
     SetMappings(normalized, {}, {
-        persist = opts.persist,
         source = opts.source,
         silent = opts.silent,
+        persist = opts.persist,
         rawText = opts.rawText,
+        templateVersion = opts.templateVersion,
     })
     return true
 end
@@ -186,7 +250,7 @@ end
 local function ResetToConfigDefaults(opts)
     opts = opts or {}
     local defaults = LoadDefaultMappings()
-    SetMappings(defaults, {}, {persist = opts.persist, source = "Defaults"})
+    SetMappings(defaults, {}, {persist = opts.persist, source = "Defaults", rawText = opts.rawText, templateVersion = opts.templateVersion})
     return defaults
 end
 
@@ -220,41 +284,37 @@ local function ShowConfigUI()
                     trusted = opts.trusted,
                     rawText = opts.rawText,
                     silent = opts.silent,
+                    templateVersion = opts.templateVersion,
                 })
             end,
             ResetToDefaults = ResetToConfigDefaults,
             ValidateEntry = ValidateMappingEntry,
+            GetDefaultMappings = LoadDefaultMappings,
+            GetSavedMappings = GetSavedMappings,
+            GetSavedRawText = GetSavedRawText,
+            BuildTemplateText = BuildTemplateText,
         })
     else
         print("CustomActionButtonText: UI module is missing.")
     end
 end
--- 获取显示文本（支持组合键，限制自定义范围）
--- 允许自定义的按键类型：
--- 1. 鼠标键（单独）
--- 2. 修饰键+鼠标键
--- 3. 修饰键+字母/数字/功能键（仅单个修饰键）
--- 4. 修饰键（单独，用于构建组合）
--- 不允许：单独的字母、数字、功能键，多重修饰键组合
+-- 生成显示文本：优先精确匹配；单修饰拼接允许，裸字母/数字/F键与多修饰返回原生文本
 local function GetDisplayText(bindingKey)
     if not bindingKey or bindingKey == "" then return nil end
     
     local key = NormalizeKey(bindingKey)
     
-    -- 优先级1：检查组合键完整配置（最高优先级）
     if keyMappings[key] then
         return keyMappings[key]
     end
     
-    -- 检查是否为单独的字母、数字或功能键（不允许自定义）
-    if string.match(key, "^[A-Z]$") or           -- 单个字母
-       string.match(key, "^[0-9]$") or           -- 单个数字
-       string.match(key, "^F[0-9]+$") then       -- 功能键 F1-F12等
+    if string.match(key, "^[A-Z]$") or
+       string.match(key, "^[0-9]$") or
+       string.match(key, "^F[0-9]+$") then
         debugCounters.singleDisallowed = debugCounters.singleDisallowed + 1
-        return nil  -- 不允许自定义，使用原生显示
+        return nil
     end
     
-    -- 检查是否为多重修饰键组合（不允许自定义）
     local modifierCount = 0
     if string.find(key, "CTRL%-") then modifierCount = modifierCount + 1 end
     if string.find(key, "SHIFT%-") then modifierCount = modifierCount + 1 end
@@ -262,15 +322,13 @@ local function GetDisplayText(bindingKey)
     
     if modifierCount > 1 then
         debugCounters.multiModifierDisallowed = debugCounters.multiModifierDisallowed + 1
-        return nil  -- 多重修饰键组合不允许自定义，使用原生显示
+        return nil
     end
     
-    -- 优先级2：解析修饰键和基础键，使用单独键配置组合
     local result = ""
     local hasModifier = false
-    local hasConfig = false  -- 标记是否有配置
+    local hasConfig = false
     
-    -- 检查修饰键（按顺序：CTRL, SHIFT, ALT，与WoW绑定系统一致）
     if string.find(key, "CTRL%-") then
         local ctrlText = keyMappings["CTRL"]
         if ctrlText then
@@ -299,7 +357,6 @@ local function GetDisplayText(bindingKey)
         hasModifier = true
     end
     
-    -- 检查鼠标按键（允许单独自定义）
     if key == "MOUSEWHEELUP" then
         local mouseText = keyMappings["MOUSEWHEELUP"]
         if mouseText then
@@ -331,7 +388,6 @@ local function GetDisplayText(bindingKey)
             hasConfig = true
         end
     elseif string.match(key, "^BUTTON(%d+)$") then
-        -- 支持 BUTTON6, BUTTON7 等更多鼠标按键
         local buttonNum = string.match(key, "^BUTTON(%d+)$")
         local buttonKey = "BUTTON" .. buttonNum
         local mouseText = keyMappings[buttonKey]
@@ -340,18 +396,14 @@ local function GetDisplayText(bindingKey)
             hasConfig = true
         end
     else
-        -- 其他按键（字母、数字、功能键等）
         if not hasModifier then
-            -- 没有修饰键的其他按键，不允许自定义，返回nil使用原始显示
             return nil
         end
-        -- 有修饰键的组合，将剩余按键（字母/数字/功能键）也添加到结果中
         if key and key ~= "" then
             result = result .. key
         end
     end
     
-    -- 只有在有配置且结果不为空时才返回自定义文本，否则返回nil使用原生显示
     if hasConfig and result ~= "" then
         return result
     else
@@ -360,30 +412,28 @@ local function GetDisplayText(bindingKey)
     end
 end
 
--- 获取按钮的绑定键名
--- 重新加载配置
 local function ReloadConfig()
-
-    local loaded = false
-
-    -- 优先尝试 SavedVariables（空表则视为无效）
-    if _G[savedVariableName] and _G[savedVariableName].mappings then
-        local saved = _G[savedVariableName].mappings
-        if TableCount(saved) > 0 then
-            local ok = ApplyMappings(saved, {persist = false, source = "SavedVariables", trusted = true})
-            if ok then
-                loaded = true
+    local saved = _G[savedVariableName]
+    if saved then
+        local raw = saved.rawText
+        if raw and raw ~= "" then
+            local parsed, ok, bad = Data.ParseText(raw)
+            if ok > 0 and bad == 0 then
+                ApplyMappings(parsed, {persist = false, source = "SavedVariables(raw)", trusted = true, rawText = raw, templateVersion = saved.templateVersion})
+                return
+            else
+                print(string.format("CustomActionButtonText: 存档解析失败（有效:%d 无效:%d），已回退默认模板。", ok or 0, bad or 0))
             end
-        else
-            -- 丢弃空的旧数据，后续写入默认
-            _G[savedVariableName] = nil
+        end
+        if saved.mappings and TableCount(saved.mappings) > 0 then
+            ApplyMappings(saved.mappings, {persist = false, source = "SavedVariables(mappings)", trusted = true, rawText = raw, templateVersion = saved.templateVersion})
+            return
         end
     end
 
-    if not loaded then
-        local defaults = LoadDefaultMappings()
-        ApplyMappings(defaults, {persist = true, source = "Defaults", trusted = true})
-    end
+    local defaults = LoadDefaultMappings()
+    local template = BuildTemplateText(defaults)
+    ApplyMappings(defaults, {persist = true, source = "Defaults", trusted = true, rawText = template, templateVersion = currentTemplateVersion})
 end
 
 -- 斜杠命令处理
@@ -411,10 +461,21 @@ SlashCmdList["CUSTOMACTIONBUTTONTEXT"] = function(msg)
         print(string.format("  single keys disallowed: %d", debugCounters.singleDisallowed))
         print(string.format("  multi modifiers disallowed: %d", debugCounters.multiModifierDisallowed))
         print(string.format("  allowed but missing mapping (native used): %d", debugCounters.missingMapping))
+    elseif command == "reset" or command == "r" then
+        local defaults = ResetToConfigDefaults({
+            persist = true,
+            rawText = BuildTemplateText(LoadDefaultMappings()),
+            templateVersion = currentTemplateVersion,
+        })
+        if type(_G.CustomActionButtonText_ResetEditorTemplate) == "function" then
+            _G.CustomActionButtonText_ResetEditorTemplate(defaults)
+        end
+        print("CustomActionButtonText: 已重置为默认模板并应用（存档已更新）。")
     else
         print("CustomActionButtonText Commands:")
         print("  /cabt - Open settings UI")
         print("  /cabt debug (or /cabt d) - Show debug information")
+        print("  /cabt reset (or /cabt r) - Reset mappings to default template")
     end
 end
 
@@ -425,9 +486,11 @@ CustomActionButtonText_API = {
     ResetToDefaults = ResetToConfigDefaults,
     GetDefaultMappings = LoadDefaultMappings,
     GetSavedMappings = GetSavedMappings,
+    GetSavedRawText = GetSavedRawText,
     ValidateEntry = ValidateMappingEntry,
     Hotkeys = Hotkeys,
-    GetSavedRawText = GetSavedRawText,
+    BuildTemplateText = BuildTemplateText,
+    TemplateVersion = currentTemplateVersion,
 }
 -- 事件处理
 local frame = CreateFrame("Frame")
@@ -438,7 +501,6 @@ frame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
 
 frame:SetScript("OnEvent", function(self, event, ...)
     if event == "ADDON_LOADED" and ... == addonName then
-        -- 插件加载完成，读取用户数据；缺失时使用内置默认
         ReloadConfig()
 
     elseif event == "PLAYER_LOGIN" then

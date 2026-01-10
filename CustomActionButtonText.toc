@@ -1,13 +1,12 @@
 ## Interface: 110200, 110205, 110207
 ## Title: Custom Action Button Text
-## Notes: Customize action bar hotkey text display
-## Notes-zhCN: 自定义动作条热键文本显示
-## Notes-zhTW: 自定義動作條熱鍵文字顯示
+## Notes: Customize action bar hotkey text display (/cabt to open settings)
+## Notes-zhCN: 自定义动作条热键文本显示（/cabt 打开设置）
+## Notes-zhTW: 自定義動作條熱鍵文字顯示（/cabt 開啟設定）
 ## Author: capzk
-## Version: 0.0.1
+## Version: 0.1.0
 ## DefaultState: enabled
 ## SavedVariables: CustomActionButtonTextDB
-
 Data.lua
 Hotkeys.lua
 CustomActionButtonText.lua

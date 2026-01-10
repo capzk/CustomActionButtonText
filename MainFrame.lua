@@ -71,7 +71,7 @@ function CustomActionButtonText_ShowUI(api)
     local uiFrame = _G["CustomActionButtonTextUI"]
     if not uiFrame then
         uiFrame = CreateFrame("Frame", "CustomActionButtonTextUI", UIParent, "BasicFrameTemplateWithInset")
-        uiFrame:SetSize(540, 520)
+        uiFrame:SetSize(720, 640)
         uiFrame:SetPoint("CENTER")
         uiFrame:SetMovable(true)
         uiFrame:EnableMouse(true)
@@ -83,19 +83,10 @@ function CustomActionButtonText_ShowUI(api)
         local padding = 12
         local editorWidth = uiFrame:GetWidth() - padding * 2
 
-        -- 顶部自定义帮助按钮（●●●）
-        local helpBtn = CreateFrame("Button", nil, uiFrame)
-        helpBtn:SetSize(36, 20)
-        helpBtn:SetPoint("TOPRIGHT", uiFrame.CloseButton, "LEFT", -6, 10)
-        local helpText = helpBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        helpText:SetPoint("CENTER")
-        helpText:SetText("●●●")
-        helpBtn:SetScript("OnEnter", function(self) helpText:SetTextColor(1, 0.82, 0) end)
-        helpBtn:SetScript("OnLeave", function(self) helpText:SetTextColor(1, 1, 1) end)
-
         local editorFrame = CreateFrame("ScrollFrame", nil, uiFrame, "InputScrollFrameTemplate")
         editorFrame:SetPoint("TOPLEFT", padding, -32)
         editorFrame:SetPoint("BOTTOMRIGHT", -padding, 12)
+        uiFrame.editorFrame = editorFrame
         editorFrame.CharCount:Hide()
         editorFrame.EditBox:SetFontObject("GameFontHighlight")
         editorFrame.EditBox:SetWidth(editorWidth - 30)
@@ -107,7 +98,6 @@ function CustomActionButtonText_ShowUI(api)
         editorFrame.EditBox:SetScript("OnTabPressed", function(self)
             self:Insert("    ")
         end)
-        -- 撤销/重做历史
         local history = { stack = {}, index = 0, restoring = false, max = 50 }
         local function PushHistory(text)
             if history.restoring then return end
@@ -121,7 +111,7 @@ function CustomActionButtonText_ShowUI(api)
             end
         end
 
-        uiFrame.state = { mappings = {}, helpMode = false, rawText = nil }
+        uiFrame.state = { mappings = {}, rawText = nil }
 
         local function GetInitialMappings()
             local savedText = api.GetSavedRawText and api.GetSavedRawText()
@@ -132,12 +122,11 @@ function CustomActionButtonText_ShowUI(api)
             if saved and next(saved) ~= nil then
                 return SerializeMappings(saved)
             end
-            local defaults = api.GetDefaultMappings and api.GetDefaultMappings()
-            if defaults and next(defaults) ~= nil then
-                return SerializeMappings(defaults)
+            local defaults = api.GetDefaultMappings and api.GetDefaultMappings() or {}
+            if api.BuildTemplateText then
+                return api.BuildTemplateText(defaults)
             end
-            local current = api.GetMappings and api.GetMappings() or {}
-            return SerializeMappings(current)
+            return SerializeMappings(defaults)
         end
 
         local function LoadToEditor()
@@ -148,7 +137,6 @@ function CustomActionButtonText_ShowUI(api)
             end
             uiFrame.state.mappings = {}
             editorFrame.EditBox:SetText(text)
-            uiFrame.state.helpMode = false
             history.stack = { text }
             history.index = 1
             history.restoring = false
@@ -157,125 +145,34 @@ function CustomActionButtonText_ShowUI(api)
         local function LoadDefaults()
             local defaults = api.GetDefaultMappings and api.GetDefaultMappings()
             if defaults then
-                api.ApplyMappings(defaults, {persist = false, source = "UI-defaults"})
-                editorFrame.EditBox:SetText(SerializeMappings(defaults))
-                print("CustomActionButtonText: 已加载默认映射（未保存）。")
+                local template = api.BuildTemplateText and api.BuildTemplateText(defaults) or SerializeMappings(defaults)
+                api.ApplyMappings(defaults, {persist = true, source = "UI-defaults", rawText = template, templateVersion = api.TemplateVersion})
+                editorFrame.EditBox:SetText(template)
+                uiFrame.state.rawText = template
+                print("CustomActionButtonText: 已加载默认模板并保存。")
             else
                 print("CustomActionButtonText: 无默认映射可加载。")
             end
         end
 
-        -- 帮助窗口
-        local function ShowHelpWindow()
-            if _G["CustomActionButtonTextHelp"] then
-                _G["CustomActionButtonTextHelp"]:Show()
-                return
-            end
-            -- 独立帮助窗口（可拖动，置顶显示）
-            local helpFrame = CreateFrame("Frame", "CustomActionButtonTextHelp", UIParent, "BasicFrameTemplateWithInset")
-            helpFrame:SetSize(640, 600)
-            helpFrame:SetPoint("CENTER")
-            helpFrame:SetMovable(true)
-            helpFrame:EnableMouse(true)
-            helpFrame:RegisterForDrag("LeftButton")
-            helpFrame:SetScript("OnDragStart", helpFrame.StartMoving)
-            helpFrame:SetScript("OnDragStop", helpFrame.StopMovingOrSizing)
-            helpFrame:SetFrameStrata("DIALOG")
-            helpFrame.TitleText:SetText("Custom Action Button Text - 帮助")
-
-            local scroll = CreateFrame("ScrollFrame", nil, helpFrame, "InputScrollFrameTemplate")
-            scroll:SetPoint("TOPLEFT", 12, -32)
-            scroll:SetPoint("BOTTOMRIGHT", -12, 12)
-            scroll.CharCount:Hide()
-            scroll.EditBox:SetFontObject("GameFontHighlight")
-            scroll.EditBox:SetWidth(616) -- 640 - 左右间距(24)
-            scroll.EditBox:SetAutoFocus(false)
-            scroll.EditBox:SetSpacing(4)
-            scroll.EditBox:SetMultiLine(true)
-            scroll.EditBox:EnableKeyboard(true)
-            scroll.EditBox:SetPropagateKeyboardInput(false)
-            scroll.EditBox:SetAltArrowKeyMode(false)
-            scroll.EditBox:EnableMouse(true)
-
-            local helpLines = { -- 标准写法示例，供复制使用
-                "标准写法（可复制，使用半角“=”与“+”）：",
-                "",
-                "-- 修饰键（单独）",
-                "SHIFT = S+",
-                "CTRL = C+",
-                "ALT = A+",
-                "",
-                "-- 鼠标滚轮与侧键",
-                "MOUSEWHEELUP = MU",
-                "MOUSEWHEELDOWN = MD",
-                "BUTTON3 = M3",
-                "BUTTON4 = M4",
-                "BUTTON5 = M5",
-                "",
-                "-- 修饰键 + 鼠标",
-                "SHIFT-MOUSEWHEELUP = SMU",
-                "CTRL-MOUSEWHEELUP = CMU",
-                "ALT-MOUSEWHEELUP = AMU",
-                "SHIFT-MOUSEWHEELDOWN = SMD",
-                "CTRL-MOUSEWHEELDOWN = CMD",
-                "ALT-MOUSEWHEELDOWN = AMD",
-                "SHIFT-BUTTON3 = SM3",
-                "CTRL-BUTTON3 = CM3",
-                "ALT-BUTTON3 = AM3",
-                "SHIFT-BUTTON4 = SM4",
-                "CTRL-BUTTON4 = CM4",
-                "ALT-BUTTON4 = AM4",
-                "SHIFT-BUTTON5 = SM5",
-                "CTRL-BUTTON5 = CM5",
-                "ALT-BUTTON5 = AM5",
-                "",
-                "-- 修饰键 + 字母/数字示例",
-                "SHIFT-1 = S1",
-                "CTRL-2 = C2",
-                "ALT-3 = A3",
-                "SHIFT-A = SA",
-                "CTRL-E = CE",
-                "ALT-R = AR",
-            }
-            local helpText = table.concat(helpLines, "\n")
-            scroll.EditBox:SetText(helpText)
-            scroll.EditBox:SetScript("OnTextChanged", function(self, userInput)
-                if userInput then
-                    local cursor = self:GetCursorPosition()
-                    self:SetText(helpText)
-                    self:SetCursorPosition(math.min(cursor, #helpText))
-                end
-            end)
-            scroll.EditBox:SetScript("OnEditFocusGained", function(self)
-                self:HighlightText()
-            end)
-            scroll.EditBox:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-            scroll.EditBox:SetScript("OnMouseDown", function(self, button)
-                if button == "LeftButton" then
-                    self:SetFocus()
-                end
-            end)
-        end
-
-        helpBtn:SetScript("OnClick", function()
-            ShowHelpWindow()
-        end)
-
         -- 快捷键：Ctrl+S 保存
         editorFrame.EditBox:SetScript("OnKeyDown", function(self, key)
             local ctrl = IsControlKeyDown()
             if ctrl and key == "S" then
-                local parsed, ok, bad = ParseMappings(editorFrame.EditBox:GetText(), api.ValidateEntry)
+                local parsed, ok, bad, reasons = ParseMappings(editorFrame.EditBox:GetText(), api.ValidateEntry)
                 if ok == 0 then
                     print("CustomActionButtonText: 保存失败，编辑器没有任何有效行（请检查格式：KEY = VALUE，半角符号）。")
                     return
                 end
                 if bad > 0 then
                     print(string.format("CustomActionButtonText: 保存失败，发现 %d 条无效行，成功解析 %d 条。", bad, ok))
+                    if reasons and reasons[1] then
+                        print("示例无效行：" .. reasons[1])
+                    end
                     return
                 end
                 local rawText = editorFrame.EditBox:GetText()
-                local applied, reason = api.ApplyMappings(parsed, {persist = true, source = "UI", trusted = true, silent = true, rawText = rawText})
+                local applied, reason = api.ApplyMappings(parsed, {persist = true, source = "UI", trusted = true, silent = true, rawText = rawText, templateVersion = api.TemplateVersion})
                 if applied ~= false then
                     uiFrame.state.mappings = ShallowCopy(parsed)
                     uiFrame.state.rawText = rawText
@@ -309,6 +206,20 @@ function CustomActionButtonText_ShowUI(api)
         editorFrame.EditBox:SetScript("OnTextChanged", function(self)
             PushHistory(self:GetText())
         end)
+
+        local function ResetEditorTemplate(defaults)
+            if not uiFrame or not uiFrame.editorFrame then return false end
+            local template = (api.BuildTemplateText and api.BuildTemplateText(defaults or (api.GetDefaultMappings and api.GetDefaultMappings() or {}))) or ""
+            uiFrame.state.rawText = template
+            uiFrame.state.mappings = {}
+            uiFrame.editorFrame.EditBox:SetText(template)
+            history.stack = { template }
+            history.index = 1
+            history.restoring = false
+            return true
+        end
+
+        _G.CustomActionButtonText_ResetEditorTemplate = ResetEditorTemplate
 
         uiFrame:SetScript("OnShow", function()
             LoadToEditor()
