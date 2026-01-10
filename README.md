@@ -4,10 +4,9 @@
 
 ## 使用方法 / Usage
 
-- 打开编辑器：`/cabet ui`（顶部“●●●”按钮弹出帮助窗口）
+- 打开编辑器：`/cabt`（顶部“●●●”按钮弹出帮助窗口）
 - 编辑与保存：在编辑器中按 `Ctrl+S` 校验并保存；保存后立即刷新动作条显示
-- 重载配置：`/cabet reload` 重新应用已保存数据（若无则使用内置默认）
-- 调试：`/cabet debug` 查看映射数量、回退统计等
+- 调试：`/cabt debug` 查看映射数量、回退统计等
 
 ## 文本格式 / Format
 
@@ -50,6 +49,5 @@ ALT-BUTTON5 = AM5
 
 ## 命令 / Commands
 
-- `/cabet ui` 打开编辑器
-- `/cabet reload` 重载已保存数据或默认
-- `/cabet debug` 打印调试信息
+- `/cabt` 打开编辑器
+- `/cabt debug` 打印调试信息

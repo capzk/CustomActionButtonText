@@ -385,18 +385,12 @@ local function ReloadConfig()
 end
 
 -- 斜杠命令处理
-SLASH_CUSTOMACTIONBUTTONTEXT1 = "/cabet"
-SLASH_CUSTOMACTIONBUTTONTEXT2 = "/cabt"
+SLASH_CUSTOMACTIONBUTTONTEXT1 = "/cabt"
 SlashCmdList["CUSTOMACTIONBUTTONTEXT"] = function(msg)
     local command = string.lower(strtrim(msg or ""))
     
-    if command == "reload" or command == "r" then
-        ReloadConfig()
-    elseif command == "ui" then
+    if command == "" or command == "ui" then
         ShowConfigUI()
-    elseif command == "reset" then
-        Hotkeys.ResetAllButtons()
-        print("CustomActionButtonText: Reset all buttons to native display.")
     elseif command == "debug" or command == "d" then
         print("CustomActionButtonText Debug Info:")
         print("- Loaded mappings: " .. (keyMappings and "Yes" or "No"))
@@ -417,10 +411,8 @@ SlashCmdList["CUSTOMACTIONBUTTONTEXT"] = function(msg)
         print(string.format("  allowed but missing mapping (native used): %d", debugCounters.missingMapping))
     else
         print("CustomActionButtonText Commands:")
-        print("  /cabet reload (or r) - Reload configuration from saved data or defaults")
-        print("  /cabet ui - Open settings UI")
-        print("  /cabet reset - Reset all buttons to native display")
-        print("  /cabet debug (or d) - Show debug information")
+        print("  /cabt - Open settings UI")
+        print("  /cabt debug (or /cabt d) - Show debug information")
     end
 end
 
