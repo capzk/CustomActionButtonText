@@ -6,6 +6,9 @@
 ## Author: capzk
 ## Version: 0.0.1
 ## DefaultState: enabled
+## SavedVariables: CustomActionButtonTextDB
 
-Config.lua
+Data.lua
+Hotkeys.lua
 CustomActionButtonText.lua
+MainFrame.lua

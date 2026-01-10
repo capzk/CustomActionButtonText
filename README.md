@@ -4,20 +4,22 @@
 
 ---
 
+> This addon **only personalizes hotkey text display**. It does **not** change key bindings or any game data. Changes apply when the addon loads (and when you manually `/cabet reload`), and can be reset with `/cabet reset`.  
+> 本插件**仅修改快捷键文本显示**，**不会**修改按键绑定或任何游戏数据。显示改动在插件加载（或手动 `/cabet reload`）时生效，可用 `/cabet reset` 还原。
+
 ## English
 
 A World of Warcraft addon that customizes the display of hotkey text on action buttons, allowing players to create cleaner and more personalized action bar interfaces.
 
 ### Features
 
+- **Display-only**: Visual change only; bindings and data stay untouched
 - **Modifier Key Customization**: Customize display of Shift, Ctrl, Alt keys
 - **Mouse Button Support**: Custom display for mouse wheel, middle button, and side buttons
-- **Combination Keys**: Advanced support for complex key combinations
-- **Persistent Configuration**: Settings are automatically saved and restored
-- **Real-time Updates**: Changes apply immediately to all action bars
+- **Combination Keys**: Exact-match mappings plus fallback concatenation
+- **Manual reload/reset**: Apply config via `/cabet reload`; restore native via `/cabet reset`
+- **Native UI**: Edit/save mappings in-game with `/cabet ui` (stored in SavedVariables)
 - **Comprehensive Coverage**: Works with all action bars including main, extra, pet, and stance bars
-- **Non-invasive**: Only changes visual display, does not modify game data or key bindings
-- **Safe and Reversible**: Disabling the addon instantly restores original hotkey display
 
 ### Installation
 
@@ -28,54 +30,89 @@ A World of Warcraft addon that customizes the display of hotkey text on action b
 
 ### Configuration
 
-The addon uses a configuration file approach for maximum flexibility. Edit the `Config.lua` file to customize your settings.
+Configure in game via `/cabet ui`. The text editor saves to SavedVariables (account-wide). If no saved data exists, built-in defaults are loaded into the editor.
 
-#### Configuration File Location
-```
-World of Warcraft\Interface\AddOns\CustomActionButtonText\Config.lua
-```
-
-#### Configuration Structure
-
-The configuration follows a priority system:
-
-1. **Combination Keys** (Highest Priority) - Exact matches for specific key combinations
-2. **Modifier Keys** (Medium Priority) - Used to build combination displays
-3. **Mouse Keys** (Base Priority) - Individual mouse button displays
+#### Format & Rules
+- Use half-width characters; format `KEY = VALUE` (or `KEY VALUE`).
+- Allowed: single modifier (`SHIFT`/`CTRL`/`ALT`), mouse buttons (wheel up/down, button3/4/5…), or single modifier + key/mouse. No multi-modifier combos; no bare letters/numbers/F-keys.
+- Priority: exact combinations first; otherwise modifier text + base key concatenation. Invalid lines are rejected on save.
+- Duplicates: same normalized key uses the **last** definition; `/cabet reload` prints warnings (up to 5).
+- Debug: `/cabet debug` shows duplicate count and fallback stats.
 
 #### Current Default Configuration
 
-```lua
--- Combination Keys (Highest Priority)
-combinations = {
-    ["SHIFT-MOUSEWHEELUP"] = "SMU",     -- Shift + Mouse Wheel Up
-    ["CTRL-MOUSEWHEELDOWN"] = "CMD",    -- Ctrl + Mouse Wheel Down
-    ["ALT-BUTTON3"] = "AM3",            -- Alt + Middle Mouse Button
-    -- ... more combinations
-}
-
--- Modifier Keys
-modifiers = {
-    shift = "S+",    -- Shift key displays as S+
-    ctrl = "C+",     -- Ctrl key displays as C+
-    alt = "A+",      -- Alt key displays as A+
-}
-
--- Mouse Keys
-mouseKeys = {
-    mousewheelup = "MU",        -- Mouse wheel up displays as MU
-    mousewheeldown = "MD",      -- Mouse wheel down displays as MD
-    mousemiddlebutton = "M3",   -- Middle mouse button displays as M3
-    mousebutton4 = "M4",        -- Mouse side button 4 displays as M4
-    mousebutton5 = "M5",        -- Mouse side button 5 displays as M5
-}
+```
+SHIFT = S+
+CTRL = C+
+ALT = A+
+MOUSEWHEELUP = MU
+MOUSEWHEELDOWN = MD
+BUTTON3 = M3
+BUTTON4 = M4
+BUTTON5 = M5
+SHIFT-MOUSEWHEELUP = SMU
+CTRL-MOUSEWHEELUP = CMU
+ALT-MOUSEWHEELUP = AMU
+SHIFT-MOUSEWHEELDOWN = SMD
+CTRL-MOUSEWHEELDOWN = CMD
+ALT-MOUSEWHEELDOWN = AMD
+SHIFT-BUTTON3 = SM3
+CTRL-BUTTON3 = CM3
+ALT-BUTTON3 = AM3
+SHIFT-BUTTON4 = SM4
+CTRL-BUTTON4 = CM4
+ALT-BUTTON4 = AM4
+SHIFT-BUTTON5 = SM5
+CTRL-BUTTON5 = CM5
+ALT-BUTTON5 = AM5
 ```
 
 #### Applying Changes
+- In UI: edit → 保存并应用（writes to SavedVariables and refreshes buttons）
+- Slash: `/cabet reload` reloads saved data/defaults; `/cabet reset` restores native display; `/cabet debug` prints stats.
 
-After modifying the configuration file, reload the UI:
+### Available Commands
+
+The addon provides a comprehensive command system for easy management:
+
+#### **Configuration Management**
+- **`/cabet reload`** or **`/cabet r`**
+  - **Purpose**: Reload configuration from Config.lua without restarting the game
+  - **When to use**: After modifying the Config.lua file
+  - **Example**: You changed mouse wheel settings, use this to apply changes instantly
+- **`/cabet ui`**
+  - **Purpose**: Open the native UI to view/edit/save mappings (SavedVariables)
+  - **When to use**: Adjust mappings in-game without editing files
+
+#### **Reset Functions**
+- **`/cabet reset`**
+  - **Purpose**: Reset all buttons to native display (fixes display issues)
+  - **When to use**: When buttons show incorrect text (like dots instead of letters)
+  - **Example**: If single letters appear as dots, this command restores original display
+
+#### **Troubleshooting**
+- **`/cabet debug`** or **`/cabet d`**
+  - **Purpose**: Show detailed debug information for troubleshooting
+  - **When to use**: When the addon isn't working as expected
+  - **Information shown**: 
+    - Configuration loading status
+    - Number of active mappings
+    - Original hotkeys backup status
+    - Memory usage statistics
+
+#### **Help**
+- **`/cabet`** (no parameters)
+  - **Purpose**: Show help with all available commands
+  - **When to use**: When you forget command syntax or need quick reference
+
+### Command Usage Examples
+
+**Typical workflow (UI):**
 ```
-/reload
+1. /cabet ui              (open editor)
+2. Edit mappings          (KEY = VALUE, half-width)
+3. 保存并应用             (writes to SavedVariables & refreshes)
+4. /cabet debug           (verify)
 ```
 
 ### Supported Key Types
@@ -88,12 +125,72 @@ After modifying the configuration file, reload the UI:
 
 ### Troubleshooting
 
-If the addon doesn't work as expected:
+If the addon doesn't work as expected, follow these steps:
 
-1. **Reload UI**: Use `/reload` to refresh the interface
-2. **Verify key bindings**: Ensure your action buttons have assigned hotkeys
-3. **Check WoW version**: Ensure you're using a supported version (11.0+)
-4. **Check configuration**: Verify your Config.lua file syntax is correct
+#### **Common Issues and Solutions**
+
+**Issue 1: Letters/numbers show as dots**
+```
+Solution: /cabet reset
+Explanation: This restores native hotkey display
+```
+
+**Issue 2: Saved mappings not applied**
+```
+Solution: /cabet reload
+Explanation: Reload SavedVariables or defaults
+```
+
+**Issue 3: Some buttons not updating**
+```
+Solution: /cabet reload
+Explanation: Reload mappings and refresh all buttons
+```
+
+**Issue 4: Addon seems broken**
+```
+Solution: /cabet debug
+Explanation: This shows what's wrong with the configuration
+```
+
+#### **Step-by-Step Troubleshooting**
+
+1. **First, check current status**
+   ```
+   /cabet debug
+   ```
+   Look for error messages or unusual values
+
+2. **Reset to clean state**
+   ```
+   /cabet reset
+   ```
+   This fixes most display issues
+
+3. **Reload saved mappings**
+   ```
+   /cabet reload
+   ```
+   This reapplies your saved settings
+
+4. **Force refresh if needed**
+   ```
+   /cabet reload
+   ```
+   This ensures all buttons are refreshed
+
+5. **If still not working**
+   ```
+   /reload
+   ```
+   This restarts the entire UI (last resort)
+
+#### **Additional Checks**
+
+- **Verify key bindings**: Ensure your action buttons have assigned hotkeys
+- **Check WoW version**: Ensure you're using a supported version (11.0+)
+- **Check configuration**: Verify your Config.lua file syntax is correct
+- **Test with simple config**: Try with minimal configuration first
 
 ### Version Support
 
@@ -105,6 +202,8 @@ If the addon doesn't work as expected:
 - **Completely Reversible**: Disabling or removing the addon will immediately restore the original hotkey display
 - **No Data Loss**: Your original key bindings and game settings remain completely unchanged
 - **Safe to Use**: The addon only affects the UI display layer and cannot cause data corruption or game issues
+- **Emergency Reset**: If anything goes wrong, use `/cabet reset` to instantly restore native display
+- **Real-time Configuration**: Use `/cabet reload` to apply configuration changes without restarting the game
 
 ### Author
 
@@ -118,14 +217,13 @@ capzk
 
 ### 功能特性
 
+- **仅显示层**：只改热键文本，不改按键绑定或数据
 - **修饰键自定义**: 自定义 Shift、Ctrl、Alt 键的显示方式
 - **鼠标按键支持**: 支持鼠标滚轮、中键、侧键的自定义显示
-- **组合键支持**: 高级组合键配置，支持复杂按键组合
-- **配置持久化**: 设置自动保存和恢复
-- **实时更新**: 配置更改立即应用到所有动作条
+- **组合键支持**: 精确组合配置 + 自动拼接
+- **手动重载/还原**: `/cabet reload` 套用配置，`/cabet reset` 还原显示
+- **原生设置界面**：使用 `/cabet ui` 在游戏内查看/编辑/保存映射（写入 SavedVariables）
 - **全面覆盖**: 支持所有动作条，包括主动作条、额外动作条、宠物动作条和姿态动作条
-- **非侵入性**: 仅改变视觉显示，不修改游戏数据或按键绑定
-- **安全可逆**: 禁用插件后立即恢复原始快捷键显示
 
 ### 安装方法
 
@@ -136,54 +234,96 @@ capzk
 
 ### 配置方法
 
-本插件采用配置文件方式，提供最大的灵活性。编辑 `Config.lua` 文件来自定义您的设置。
+在游戏内使用文本编辑器：输入 `/cabet ui`，按 `KEY = VALUE`（半角符号）逐行编辑，点击“保存并应用”即可写入 SavedVariables（账号共享）。没有用户数据时会自动载入内置默认映射。
 
-#### 配置文件位置
-```
-魔兽世界安装目录\Interface\AddOns\CustomActionButtonText\Config.lua
-```
-
-#### 配置结构
-
-配置采用优先级系统：
-
-1. **组合键完整映射**（最高优先级）- 精确匹配特定按键组合
-2. **修饰键配置**（中等优先级）- 用于构建组合键显示
-3. **鼠标按键配置**（基础优先级）- 单独鼠标按键显示
+#### 格式与规则
+- 使用半角符号，格式 `KEY = VALUE`（或 `KEY VALUE`）
+- 允许：单修饰键（SHIFT/CTRL/ALT）、鼠标键（滚轮、Button3/4/5…）、单修饰 + 基础键/鼠标键
+- 不允许：裸字母/数字/F键、多重修饰键
+- 优先级：精确组合最高；否则修饰键文本 + 基础键拼接。非法行保存时直接拒绝。
+- 重复：同一规范化键重复定义时 **后面的值生效**，`/cabet reload` 会打印覆盖警告（最多显示前 5 条）。
+- 调试：`/cabet debug` 会显示重复计数以及回退原因统计（单键被拒、多重修饰被拒、允许但未找到映射）。
 
 #### 当前默认配置
 
-```lua
--- 组合键完整映射（最高优先级）
-combinations = {
-    ["SHIFT-MOUSEWHEELUP"] = "SMU",     -- Shift + 鼠标滚轮上
-    ["CTRL-MOUSEWHEELDOWN"] = "CMD",    -- Ctrl + 鼠标滚轮下
-    ["ALT-BUTTON3"] = "AM3",            -- Alt + 鼠标中键
-    -- ... 更多组合
-}
-
--- 修饰键配置
-modifiers = {
-    shift = "S+",    -- Shift 键显示为 S+
-    ctrl = "C+",     -- Ctrl 键显示为 C+
-    alt = "A+",      -- Alt 键显示为 A+
-}
-
--- 鼠标按键配置
-mouseKeys = {
-    mousewheelup = "MU",        -- 鼠标滚轮向上显示为 MU
-    mousewheeldown = "MD",      -- 鼠标滚轮向下显示为 MD
-    mousemiddlebutton = "M3",   -- 鼠标中键显示为 M3
-    mousebutton4 = "M4",        -- 鼠标侧键4显示为 M4
-    mousebutton5 = "M5",        -- 鼠标侧键5显示为 M5
-}
+```
+SHIFT = S+
+CTRL = C+
+ALT = A+
+MOUSEWHEELUP = MU
+MOUSEWHEELDOWN = MD
+BUTTON3 = M3
+BUTTON4 = M4
+BUTTON5 = M5
+SHIFT-MOUSEWHEELUP = SMU
+CTRL-MOUSEWHEELUP = CMU
+ALT-MOUSEWHEELUP = AMU
+SHIFT-MOUSEWHEELDOWN = SMD
+CTRL-MOUSEWHEELDOWN = CMD
+ALT-MOUSEWHEELDOWN = AMD
+SHIFT-BUTTON3 = SM3
+CTRL-BUTTON3 = CM3
+ALT-BUTTON3 = AM3
+SHIFT-BUTTON4 = SM4
+CTRL-BUTTON4 = CM4
+ALT-BUTTON4 = AM4
+SHIFT-BUTTON5 = SM5
+CTRL-BUTTON5 = CM5
+ALT-BUTTON5 = AM5
 ```
 
 #### 应用更改
+- UI 编辑后点击“保存并应用”，写入 SavedVariables 并刷新显示
+- `/cabet reload` 重新加载；`/cabet reset` 恢复原生显示；`/cabet debug` 查看统计
 
-修改配置文件后，重新加载界面：
+### 可用命令
+
+插件提供了完整的命令系统，便于管理：
+
+#### **配置管理**
+- **`/cabet reload`** 或 **`/cabet r`**
+  - **作用**: 从Config.lua重新加载配置，无需重启游戏
+  - **使用时机**: 修改Config.lua文件后
+  - **示例**: 您更改了鼠标滚轮设置，使用此命令立即应用更改
+- **`/cabet ui`**
+  - **作用**: 打开原生设置界面，在游戏内查看/编辑/保存映射（写入 SavedVariables）
+  - **使用时机**: 想直接在游戏中调整映射时
+
+#### **重置功能**
+- **`/cabet reset`**
+  - **作用**: 重置所有按钮为原生显示（修复显示问题）
+  - **使用时机**: 当按钮显示错误文本时（如字母显示为点）
+  - **示例**: 如果单个字母显示为点，此命令可恢复原始显示
+
+#### **故障排除**
+- **`/cabet debug`** 或 **`/cabet d`**
+  - **作用**: 显示详细的调试信息，用于故障排除
+  - **使用时机**: 当插件无法按预期工作时
+  - **显示信息**: 
+    - 配置加载状态
+    - 活动映射数量
+    - 原始热键备份状态
+    - 内存使用统计
+
+#### **帮助**
+- **`/cabet`** （无参数）
+  - **作用**: 显示所有可用命令的帮助
+  - **使用时机**: 当您忘记命令语法或需要快速参考时
+
+### 命令使用示例
+
+**配置更改后的典型工作流程：**
 ```
-/reload
+1. 编辑 Config.lua 文件
+2. /cabet reload          (应用更改)
+3. /cabet debug           (验证更改已加载)
+```
+
+**故障排除工作流程：**
+```
+1. /cabet debug           (检查当前状态)
+2. /cabet reset           (修复显示问题)
+3. /cabet reload          (重新应用配置)
 ```
 
 ### 支持的按键类型
@@ -196,12 +336,72 @@ mouseKeys = {
 
 ### 故障排除
 
-如果插件无法正常工作：
+如果插件无法正常工作，请按照以下步骤操作：
 
-1. **重新加载界面**: 使用 `/reload` 刷新界面
-2. **验证按键绑定**: 确保动作条按钮已分配快捷键
-3. **检查魔兽世界版本**: 确保使用支持的版本（11.0+）
-4. **检查配置文件**: 验证 Config.lua 文件语法是否正确
+#### **常见问题和解决方案**
+
+**问题1：字母/数字显示为点**
+```
+解决方案：/cabet reset
+说明：这会恢复原生热键显示
+```
+
+**问题2：配置更改未应用**
+```
+解决方案：/cabet reload
+说明：这会重新加载您的Config.lua更改
+```
+
+**问题3：某些按钮未更新**
+```
+解决方案：/cabet reload
+说明：这会重新加载配置并刷新所有按钮
+```
+
+**问题4：插件似乎损坏**
+```
+解决方案：/cabet debug
+说明：这会显示配置出了什么问题
+```
+
+#### **分步故障排除**
+
+1. **首先，检查当前状态**
+   ```
+   /cabet debug
+   ```
+   查找错误消息或异常值
+
+2. **重置为干净状态**
+   ```
+   /cabet reset
+   ```
+   这可以修复大多数显示问题
+
+3. **重新加载您的配置**
+   ```
+   /cabet reload
+   ```
+   这会应用您的自定义设置
+
+4. **如需要，强制刷新**
+   ```
+   /cabet reload
+   ```
+   这会重新加载配置并刷新所有按钮
+
+5. **如果仍然无效**
+   ```
+   /reload
+   ```
+   这会重启整个UI（最后手段）
+
+#### **其他检查项目**
+
+- **验证按键绑定**: 确保您的动作条按钮已分配热键
+- **检查魔兽世界版本**: 确保使用支持的版本（11.0+）
+- **检查配置文件**: 验证Config.lua文件语法是否正确
+- **使用简单配置测试**: 先尝试最小配置
 
 ### 版本支持
 
@@ -213,6 +413,8 @@ mouseKeys = {
 - **完全可逆**: 禁用或删除插件后会立即恢复原始的快捷键显示
 - **无数据丢失**: 您的原始按键绑定和游戏设置保持完全不变
 - **安全使用**: 插件仅影响UI显示层，不会造成数据损坏或游戏问题
+- **紧急重置**: 如果出现任何问题，使用 `/cabet reset` 立即恢复原生显示
+- **实时配置**: 使用 `/cabet reload` 应用配置更改，无需重启游戏
 
 ### 作者
 
