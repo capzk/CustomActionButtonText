@@ -6,6 +6,9 @@ local originalHotkeys = {}
 
 local function GetBindingNameForButton(buttonName)
     if not buttonName then return nil end
+    if buttonName == "ExtraActionButton1" then
+        return "EXTRAACTIONBUTTON1"
+    end
     local num = string.match(buttonName, "(%d+)$")
     if not num then return nil end
 

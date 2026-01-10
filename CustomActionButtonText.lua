@@ -218,6 +218,8 @@ local function ShowConfigUI()
                     persist = opts.persist ~= false,
                     source = opts.source or "UI",
                     trusted = opts.trusted,
+                    rawText = opts.rawText,
+                    silent = opts.silent,
                 })
             end,
             ResetToDefaults = ResetToConfigDefaults,

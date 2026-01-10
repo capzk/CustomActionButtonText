@@ -13,6 +13,7 @@
 - 半角字符，逐行 `KEY = VALUE`（或空格分隔），示例：
 
 ```
+
 SHIFT = S+
 CTRL = C+
 ALT = A+
