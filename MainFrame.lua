@@ -164,6 +164,7 @@ function CustomActionButtonText_ShowUI(api)
             
             local coloredText = ApplyCommentColoring(text)
             editorFrame.EditBox:SetText(coloredText)
+            editorFrame.EditBox:SetCursorPosition(0)
             
             history.stack = { text }
             history.index = 1
