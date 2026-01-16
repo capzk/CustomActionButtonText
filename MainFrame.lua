@@ -129,6 +129,22 @@ function CustomActionButtonText_ShowUI(api)
             return SerializeMappings(defaults)
         end
 
+        local function ApplyCommentColoring(text)
+            if not text or text == "" then return text end
+            local lines = {}
+            for line in string.gmatch(text, "[^\r\n]+") do
+                local trimmed = string.match(line, "^%s*(.-)%s*$")
+                -- 检查是否为注释行（以 #、//、-- 开头）
+                if trimmed:match("^#") or trimmed:match("^//") or trimmed:match("^%-%-") then
+                    -- 灰色注释：RGB(150,150,150) = 0x969696
+                    table.insert(lines, "|cff969696" .. line .. "|r")
+                else
+                    table.insert(lines, line)
+                end
+            end
+            return table.concat(lines, "\n")
+        end
+
         local function LoadToEditor()
             local text = uiFrame.state.rawText
             if not text or text == "" then
@@ -136,7 +152,8 @@ function CustomActionButtonText_ShowUI(api)
                 uiFrame.state.rawText = text
             end
             uiFrame.state.mappings = {}
-            editorFrame.EditBox:SetText(text)
+            local coloredText = ApplyCommentColoring(text)
+            editorFrame.EditBox:SetText(coloredText)
             history.stack = { text }
             history.index = 1
             history.restoring = false
@@ -147,7 +164,8 @@ function CustomActionButtonText_ShowUI(api)
             if defaults then
                 local template = api.BuildTemplateText and api.BuildTemplateText(defaults) or SerializeMappings(defaults)
                 api.ApplyMappings(defaults, {persist = true, source = "UI-defaults", rawText = template, templateVersion = api.TemplateVersion})
-                editorFrame.EditBox:SetText(template)
+                local coloredText = ApplyCommentColoring(template)
+                editorFrame.EditBox:SetText(coloredText)
                 uiFrame.state.rawText = template
                 print("CustomActionButtonText: 已加载默认模板并保存。")
             else
@@ -159,7 +177,10 @@ function CustomActionButtonText_ShowUI(api)
         editorFrame.EditBox:SetScript("OnKeyDown", function(self, key)
             local ctrl = IsControlKeyDown()
             if ctrl and key == "S" then
-                local parsed, ok, bad, reasons = ParseMappings(editorFrame.EditBox:GetText(), api.ValidateEntry)
+                -- 移除颜色代码后再解析
+                local rawText = string.gsub(editorFrame.EditBox:GetText(), "|c%x%x%x%x%x%x%x%x", "")
+                rawText = string.gsub(rawText, "|r", "")
+                local parsed, ok, bad, reasons = ParseMappings(rawText, api.ValidateEntry)
                 if ok == 0 then
                     print("CustomActionButtonText: 保存失败，编辑器没有任何有效行（请检查格式：KEY = VALUE，半角符号）。")
                     return
@@ -171,11 +192,13 @@ function CustomActionButtonText_ShowUI(api)
                     end
                     return
                 end
-                local rawText = editorFrame.EditBox:GetText()
                 local applied, reason = api.ApplyMappings(parsed, {persist = true, source = "UI", trusted = true, silent = true, rawText = rawText, templateVersion = api.TemplateVersion})
                 if applied ~= false then
                     uiFrame.state.mappings = ShallowCopy(parsed)
                     uiFrame.state.rawText = rawText
+                    -- 重新应用着色
+                    local coloredText = ApplyCommentColoring(rawText)
+                    self:SetText(coloredText)
                     print(string.format("CustomActionButtonText: 已应用并保存 %d 条映射。", ok))
                 else
                     print("CustomActionButtonText: 保存失败，原因：" .. tostring(reason or "未知"))
@@ -212,7 +235,8 @@ function CustomActionButtonText_ShowUI(api)
             local template = (api.BuildTemplateText and api.BuildTemplateText(defaults or (api.GetDefaultMappings and api.GetDefaultMappings() or {}))) or ""
             uiFrame.state.rawText = template
             uiFrame.state.mappings = {}
-            uiFrame.editorFrame.EditBox:SetText(template)
+            local coloredText = ApplyCommentColoring(template)
+            uiFrame.editorFrame.EditBox:SetText(coloredText)
             history.stack = { template }
             history.index = 1
             history.restoring = false
