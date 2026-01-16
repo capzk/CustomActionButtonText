@@ -4,7 +4,7 @@
 ## Notes-zhCN: 自定义动作条热键文本显示（/cabt 打开设置）
 ## Notes-zhTW: 自定義動作條熱鍵文字顯示（/cabt 開啟設定）
 ## Author: capzk
-## Version: 0.1.4
+## Version: 0.1.2
 ## DefaultState: enabled
 ## SavedVariables: CustomActionButtonTextDB
 Data.lua
