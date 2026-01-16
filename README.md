@@ -35,14 +35,16 @@
 ## 配置规则 / Configuration Rules
 
 ### ✅ 允许自定义 / Allowed
-- **修饰键**：SHIFT, CTRL, ALT, SPACE（空格既可单独用也可作修饰键）
+- **修饰键**：SHIFT, CTRL, ALT
+- **空格键**：SPACE（可单独使用或被修饰，如 SHIFT-SPACE）
 - **鼠标键**：滚轮、中键、侧键（MOUSEWHEELUP, BUTTON3-5）
 - **特殊键**：方向键、小键盘、导航键等（显示较长的键名）
-- **组合键**：单个修饰键+其他键（SHIFT-A, CTRL-1, SPACE-MOUSEWHEELUP）
+- **组合键**：单个修饰键+其他键（SHIFT-A, CTRL-1）
 
 ### ❌ 不允许自定义 / Not Allowed
 - **单独的字母/数字/F键**：A, 1, F1（原生显示已经很短）
-- **多重修饰键**：CTRL-SHIFT-T, SPACE-SHIFT-A（不支持）
+- **多重修饰键**：CTRL-SHIFT-T（不支持）
+- **空格作为修饰键**：SPACE-MOUSEWHEELUP（游戏不支持）
 
 ### 优先级说明 / Priority
 1. **精确匹配**：SHIFT-MOUSEWHEELUP = SMU

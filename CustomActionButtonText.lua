@@ -7,7 +7,7 @@ local defaultMappings = {
     ["SHIFT"] = "S",
     ["CTRL"] = "C",
     ["ALT"] = "A",
-    ["SPACE"] = "Sp",  -- 空格键也可作为修饰键
+    ["SPACE"] = "Sp",  -- 空格键可单独使用或被修饰
 
     -- 鼠标按键（必须配置，常用）
     ["MOUSEWHEELUP"] = "MU",
@@ -20,9 +20,8 @@ local defaultMappings = {
     ["SHIFT-MOUSEWHEELUP"] = "SMU",
     ["CTRL-BUTTON3"] = "CM3",
     ["ALT-BUTTON4"] = "AM4",
-    ["SPACE-MOUSEWHEELUP"] = "SpU",  -- 空格作为修饰键
 
-    -- 修饰键 + 空格组合（空格与其他修饰键组合）
+    -- 修饰键 + 空格组合（空格被其他修饰键修饰）
     ["SHIFT-SPACE"] = "SSp",
     ["CTRL-SPACE"] = "CSp",
 
@@ -143,9 +142,8 @@ local function BuildTemplateText(defaults)
         string.format("SHIFT-MOUSEWHEELUP = %s", val("SHIFT-MOUSEWHEELUP", "SMU")),
         string.format("CTRL-BUTTON3 = %s", val("CTRL-BUTTON3", "CM3")),
         string.format("ALT-BUTTON4 = %s", val("ALT-BUTTON4", "AM4")),
-        string.format("SPACE-MOUSEWHEELUP = %s", val("SPACE-MOUSEWHEELUP", "SpU")),
         "",
-        "# 修饰键组合 | Modifier Combinations",
+        "# 修饰键 + 空格 | Modifier + Space (空格被修饰)",
         string.format("SHIFT-SPACE = %s", val("SHIFT-SPACE", "SSp")),
         string.format("CTRL-SPACE = %s", val("CTRL-SPACE", "CSp")),
         "",
@@ -182,7 +180,8 @@ local function BuildTemplateText(defaults)
         "#",
         "# 【配置规则】| Configuration Rules",
         "# ✅ 允许自定义 | Allowed:",
-        "#    - 修饰键：SHIFT, CTRL, ALT, SPACE",
+        "#    - 修饰键：SHIFT, CTRL, ALT",
+        "#    - 空格键：SPACE（可单独使用或被修饰，如 SHIFT-SPACE）",
         "#    - 鼠标键：滚轮、中键、侧键",
         "#    - 特殊键：方向键、小键盘等",
         "#    - 组合键：单个修饰键+其他键",
@@ -190,6 +189,7 @@ local function BuildTemplateText(defaults)
         "# ❌ 不允许 | Not allowed:",
         "#    - 单独的字母/数字/F键：A, 1, F1",
         "#    - 多重修饰键：CTRL-SHIFT-T",
+        "#    - 空格作为修饰键：SPACE-MOUSEWHEELUP（游戏不支持）",
         "#",
         "# 【优先级】| Priority",
         "# 1. 精确匹配 | Exact match: SHIFT-MOUSEWHEELUP = SMU",
@@ -208,10 +208,8 @@ local function BuildTemplateText(defaults)
         "# ALT-MOUSEWHEELUP = AMU",
         "# ALT-BUTTON3 = AM3",
         "# ALT-BUTTON5 = AM5",
-        "# SPACE-MOUSEWHEELDOWN = SpD",
-        "# SPACE-BUTTON3 = Sp3",
         "#",
-        "# 修饰键组合扩展 | Extended modifier combinations:",
+        "# 修饰键 + 空格 | Modifier + Space (空格被修饰):",
         "# ALT-SPACE = ASp",
         "#",
         "# 小键盘 | Numpad:",
@@ -241,14 +239,12 @@ local function BuildTemplateText(defaults)
         "# SHIFT-2 = S2",
         "# CTRL-2 = C2",
         "# ALT-3 = A3",
-        "# SPACE-1 = Sp1",
         "#",
         "# 修饰键 + 字母 | Modifier + Letters:",
         "# SHIFT-A = SA",
         "# SHIFT-Q = SQ",
         "# CTRL-W = CW",
         "# ALT-R = AR",
-        "# SPACE-Q = SpQ",
         "#",
         "# 【支持的所有特殊键】| Supported Special Keys",
         "# 修饰键 | Modifiers:",
