@@ -19,14 +19,12 @@ local function NormalizeKey(key)
 end
 
 local function IsDisallowedKey(normalizedKey)
+    -- 修饰键：允许单独配置
     if normalizedKey == "SHIFT" or normalizedKey == "CTRL" or normalizedKey == "ALT" then
         return false
     end
 
-    if string.match(normalizedKey, "^[A-Z]$") or string.match(normalizedKey, "^[0-9]$") or string.match(normalizedKey, "^F[0-9]+$") then
-        return true
-    end
-
+    -- 检查是否为多重修饰键组合（不允许）
     local key = normalizedKey
     local modifierCount = 0
     if string.find(key, "CTRL%-") then
@@ -46,6 +44,52 @@ local function IsDisallowedKey(normalizedKey)
         return true
     end
 
+    -- 如果有修饰键，则基础键部分允许（已经在组合中）
+    if modifierCount > 0 then
+        return false
+    end
+
+    -- 以下是没有修饰键的单独键判断
+
+    -- 特殊键：允许单独配置
+    local specialKeys = {
+        -- 空格和常用特殊键
+        "SPACE", "TAB", "ESCAPE", "ENTER", "BACKSPACE", "DELETE", "INSERT",
+        -- 导航键
+        "HOME", "END", "PAGEUP", "PAGEDOWN",
+        -- 方向键
+        "UP", "DOWN", "LEFT", "RIGHT",
+        -- 小键盘数字
+        "NUMPAD0", "NUMPAD1", "NUMPAD2", "NUMPAD3", "NUMPAD4",
+        "NUMPAD5", "NUMPAD6", "NUMPAD7", "NUMPAD8", "NUMPAD9",
+        -- 小键盘特殊键
+        "NUMPADMULTIPLY", "NUMPADDIVIDE", "NUMPADPLUS", "NUMPADMINUS", "NUMPADDECIMAL",
+        -- 符号键（可能显示较长）
+        "BACKQUOTE", "MINUS", "EQUALS", "LEFTBRACKET", "RIGHTBRACKET",
+        "BACKSLASH", "SEMICOLON", "APOSTROPHE", "COMMA", "PERIOD", "SLASH",
+    }
+    
+    for _, specialKey in ipairs(specialKeys) do
+        if normalizedKey == specialKey then
+            return false
+        end
+    end
+
+    -- 鼠标键：允许单独配置（已在其他地方处理，这里也明确允许）
+    if string.match(normalizedKey, "^BUTTON%d+$") or 
+       normalizedKey == "MOUSEWHEELUP" or 
+       normalizedKey == "MOUSEWHEELDOWN" then
+        return false
+    end
+
+    -- 普通键：单独的字母、数字、功能键不允许自定义
+    if string.match(normalizedKey, "^[A-Z]$") or           -- 单个字母
+       string.match(normalizedKey, "^[0-9]$") or           -- 单个数字
+       string.match(normalizedKey, "^F[0-9]+$") then       -- 功能键 F1-F12等
+        return true
+    end
+
+    -- 其他未知键：默认允许
     return false
 end
 

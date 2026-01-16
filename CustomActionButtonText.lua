@@ -3,46 +3,37 @@ local savedVariableName = "CustomActionButtonTextDB"
 local currentTemplateVersion = 1
 local Data = _G.CustomActionButtonText_Data
 local defaultMappings = {
-    -- 修饰键
-    ["SHIFT"] = "S+",
-    ["CTRL"] = "C+",
-    ["ALT"] = "A+",
+    -- 修饰键（必须配置，用于组合键拼接）
+    ["SHIFT"] = "S",
+    ["CTRL"] = "C",
+    ["ALT"] = "A",
+    ["SPACE"] = "Sp",  -- 空格键也可作为修饰键
 
-    -- 鼠标按键
+    -- 鼠标按键（必须配置，常用）
     ["MOUSEWHEELUP"] = "MU",
     ["MOUSEWHEELDOWN"] = "MD",
     ["BUTTON3"] = "M3",
     ["BUTTON4"] = "M4",
     ["BUTTON5"] = "M5",
 
-    -- 组合键（精确匹配最高优先级）
+    -- 修饰键 + 鼠标组合（示例，每类一个）
     ["SHIFT-MOUSEWHEELUP"] = "SMU",
-    ["CTRL-MOUSEWHEELUP"] = "CMU",
-    ["ALT-MOUSEWHEELUP"] = "AMU",
-
-    ["SHIFT-MOUSEWHEELDOWN"] = "SMD",
-    ["CTRL-MOUSEWHEELDOWN"] = "CMD",
-    ["ALT-MOUSEWHEELDOWN"] = "AMD",
-
-    ["SHIFT-BUTTON3"] = "SM3",
     ["CTRL-BUTTON3"] = "CM3",
-    ["ALT-BUTTON3"] = "AM3",
-
-    ["SHIFT-BUTTON4"] = "SM4",
-    ["CTRL-BUTTON4"] = "CM4",
     ["ALT-BUTTON4"] = "AM4",
+    ["SPACE-MOUSEWHEELUP"] = "SpU",  -- 空格作为修饰键
 
-    ["SHIFT-BUTTON5"] = "SM5",
-    ["CTRL-BUTTON5"] = "CM5",
-    ["ALT-BUTTON5"] = "AM5",
+    -- 修饰键 + 空格组合（空格与其他修饰键组合）
+    ["SHIFT-SPACE"] = "SSp",
+    ["CTRL-SPACE"] = "CSp",
 
-    -- 修饰键 + 数字/字母示例
+    -- 特殊键（常用）
+    ["NUMPAD1"] = "N1",
+    ["NUMPAD2"] = "N2",
+    ["NUMPAD3"] = "N3",
+
+    -- 修饰键 + 字母/数字（示例）
     ["SHIFT-1"] = "S1",
-    ["CTRL-2"] = "C2",
-    ["ALT-3"] = "A3",
-    ["SHIFT-A"] = "SA",
     ["CTRL-E"] = "CE",
-    ["ALT-R"] = "AR",
 }
 local lastDuplicateWarnings = {}
 local lastDuplicateWarningsCount = 0
@@ -127,60 +118,198 @@ local function BuildTemplateText(defaults)
         return d[key] or fallback or ""
     end
     local lines = {
-        "# 写法说明",
-        "# 每行 KEY = VALUE；空行忽略。注释可用 # // -- ，放行首或行尾。",
-        "# 生效顺序：1) 精确组合匹配；2) 修饰键前缀拼接；3) 原生显示。",
-        "# 允许：修饰键；鼠标键；单修饰+鼠标；单修饰+字母/数字/F键。",
-        "# 不允许：裸字母/数字/F键；多重修饰（CTRL+SHIFT 等）。",
-        "# 保存：Ctrl+S；撤销/重做：Ctrl+Z / Ctrl+Y。",
-        "# 重置：/cabt reset 可恢复默认模板并立即生效（写入存档，可重载保留）。",
+        "# ========================================================================",
+        "# Custom Action Button Text - 快捷键显示自定义配置",
+        "# Custom Action Button Text - Hotkey Display Customization",
+        "# ========================================================================",
         "#",
-        "# Format guide",
-        "# One rule per line: KEY = VALUE; blank lines ignored. Comments (# // --) allowed head or trailing.",
-        "# Priority: 1) exact combo match; 2) modifier prefix composition; 3) native text.",
-        "# Allowed: modifiers; mouse buttons; single modifier + mouse; single modifier + letter/number/F-key.",
-        "# Not allowed: bare letters/numbers/F-keys; multiple modifiers (CTRL+SHIFT etc.).",
-        "# Save: Ctrl+S; Undo/Redo: Ctrl+Z / Ctrl+Y.",
-        "# Reset: /cabt reset restores default template and saves it (persists across reload).",
-        "# ----------------------------------------------------------------",
-        "# 修饰键（用于拼接）",
-        string.format("SHIFT = %s", val("SHIFT", "S+")),
-        string.format("CTRL = %s", val("CTRL", "C+")),
-        string.format("ALT = %s", val("ALT", "A+")),
+        "# 【使用说明 / Usage Guide】",
+        "# • 格式 / Format：每行一个配置 / One rule per line：KEY = VALUE",
+        "# • 注释 / Comments：使用 # 或 // 或 -- 开头 / Use # or // or -- at line start",
+        "# • 保存 / Save：按 Ctrl+S 保存并应用 / Press Ctrl+S to save and apply",
+        "# • 撤销 / Undo：Ctrl+Z 撤销，Ctrl+Y 重做 / Ctrl+Z to undo, Ctrl+Y to redo",
+        "# • 重置 / Reset：输入命令 /cabt reset 恢复默认 / Type /cabt reset to restore defaults",
+        "#",
+        "# 【重要限制 / Important Limit】",
+        "# ⚠️  显示文本最多3个字符，超过会显示成点！",
+        "# ⚠️  Display text max 3 characters, more will show as dots!",
+        "#     例如 / e.g.: \"SMU\" ✅  \"SpcMU\" ❌ (会显示成点 / shows as dots)",
+        "#",
+        "# 【配置规则 / Configuration Rules】",
+        "# ✅ 允许自定义 / Allowed to customize:",
+        "#    - 修饰键 / Modifiers: SHIFT, CTRL, ALT, SPACE",
+        "#    - 鼠标键 / Mouse: 滚轮、中键、侧键 / Wheel, middle, side buttons",
+        "#    - 特殊键 / Special keys: 方向键、小键盘等 / Arrows, numpad, etc.",
+        "#    - 组合键 / Combinations: 单个修饰键+其他键 / Single modifier + other keys",
+        "#      例如 / e.g.: SHIFT-A, CTRL-1, SPACE-MOUSEWHEELUP, SHIFT-SPACE",
+        "#",
+        "# ❌ 不允许自定义 / Not allowed:",
+        "#    - 单独的字母/数字/F键 / Bare letters/numbers/F-keys: A, 1, F1",
+        "#      (原生显示已经很短 / Native display is already short)",
+        "#    - 多重修饰键 / Multiple modifiers: CTRL-SHIFT-T, SPACE-SHIFT-A",
+        "#",
+        "# 【优先级说明 / Priority】",
+        "# 1. 精确匹配 / Exact match: SHIFT-MOUSEWHEELUP = SMU",
+        "# 2. 自动拼接 / Auto compose: SHIFT + MOUSEWHEELUP = S + MU = SMU",
+        "# 3. 原生显示 / Native display: 未配置的键使用游戏原生文本",
+        "#",
+        "# ========================================================================",
         "",
-        "# 鼠标按键",
+        "# ------------------------------------------------------------------------",
+        "# 第一部分：修饰键配置（必须配置，用于组合键自动拼接）",
+        "# Part 1: Modifier Keys (Required for auto-composing combinations)",
+        "# ------------------------------------------------------------------------",
+        "# 标准修饰键 / Standard modifiers (建议单字符 / recommend 1 char)",
+        string.format("SHIFT = %s", val("SHIFT", "S")),
+        string.format("CTRL = %s", val("CTRL", "C")),
+        string.format("ALT = %s", val("ALT", "A")),
+        "",
+        "# 空格键（既可单独使用，也可作为修饰键）/ Space (can be used alone or as modifier)",
+        string.format("SPACE = %s", val("SPACE", "Sp")),
+        "",
+        "# ------------------------------------------------------------------------",
+        "# 第二部分：鼠标按键配置（常用，建议配置）",
+        "# Part 2: Mouse Buttons (Common, recommended)",
+        "# ------------------------------------------------------------------------",
+        "# 鼠标滚轮 / Mouse wheel (建议2字符 / recommend 2 chars)",
         string.format("MOUSEWHEELUP = %s", val("MOUSEWHEELUP", "MU")),
         string.format("MOUSEWHEELDOWN = %s", val("MOUSEWHEELDOWN", "MD")),
+        "",
+        "# 鼠标中键和侧键 / Mouse middle and side buttons (建议2字符 / recommend 2 chars)",
         string.format("BUTTON3 = %s", val("BUTTON3", "M3")),
         string.format("BUTTON4 = %s", val("BUTTON4", "M4")),
         string.format("BUTTON5 = %s", val("BUTTON5", "M5")),
+        "# BUTTON6 = M6  # 如果你的鼠标有更多按键 / If your mouse has more buttons",
         "",
-        "# 修饰键 + 鼠标（精确匹配优先）",
+        "# ------------------------------------------------------------------------",
+        "# 第三部分：修饰键 + 鼠标组合（可选，精确匹配优先级更高）",
+        "# Part 3: Modifier + Mouse Combinations (Optional, exact match has higher priority)",
+        "# ------------------------------------------------------------------------",
+        "# 说明 / Note:",
+        "# 如果不配置精确组合，系统会自动拼接，例如 / If not configured, auto-compose:",
+        "#   SHIFT-MOUSEWHEELUP 会显示为 / will display as: SMU (SHIFT + MOUSEWHEELUP)",
+        "# 如果想要更短的显示，可以配置精确匹配 / For shorter display, configure exact match:",
+        "",
+        "# 标准修饰键 + 鼠标（示例，最多3字符）/ Standard modifiers + Mouse (examples, max 3 chars)",
         string.format("SHIFT-MOUSEWHEELUP = %s", val("SHIFT-MOUSEWHEELUP", "SMU")),
-        string.format("CTRL-MOUSEWHEELUP = %s", val("CTRL-MOUSEWHEELUP", "CMU")),
-        string.format("ALT-MOUSEWHEELUP = %s", val("ALT-MOUSEWHEELUP", "AMU")),
-        string.format("SHIFT-MOUSEWHEELDOWN = %s", val("SHIFT-MOUSEWHEELDOWN", "SMD")),
-        string.format("CTRL-MOUSEWHEELDOWN = %s", val("CTRL-MOUSEWHEELDOWN", "CMD")),
-        string.format("ALT-MOUSEWHEELDOWN = %s", val("ALT-MOUSEWHEELDOWN", "AMD")),
-        string.format("SHIFT-BUTTON3 = %s", val("SHIFT-BUTTON3", "SM3")),
+        "# SHIFT-MOUSEWHEELDOWN = SMD",
+        "# SHIFT-BUTTON3 = SM3",
+        "# SHIFT-BUTTON4 = SM4",
+        "# SHIFT-BUTTON5 = SM5",
+        "#",
+        "# CTRL-MOUSEWHEELUP = CMU",
+        "# CTRL-MOUSEWHEELDOWN = CMD",
         string.format("CTRL-BUTTON3 = %s", val("CTRL-BUTTON3", "CM3")),
-        string.format("ALT-BUTTON3 = %s", val("ALT-BUTTON3", "AM3")),
-        string.format("SHIFT-BUTTON4 = %s", val("SHIFT-BUTTON4", "SM4")),
-        string.format("CTRL-BUTTON4 = %s", val("CTRL-BUTTON4", "CM4")),
+        "# CTRL-BUTTON4 = CM4",
+        "# CTRL-BUTTON5 = CM5",
+        "#",
+        "# ALT-MOUSEWHEELUP = AMU",
+        "# ALT-MOUSEWHEELDOWN = AMD",
+        "# ALT-BUTTON3 = AM3",
         string.format("ALT-BUTTON4 = %s", val("ALT-BUTTON4", "AM4")),
-        string.format("SHIFT-BUTTON5 = %s", val("SHIFT-BUTTON5", "SM5")),
-        string.format("CTRL-BUTTON5 = %s", val("CTRL-BUTTON5", "CM5")),
-        string.format("ALT-BUTTON5 = %s", val("ALT-BUTTON5", "AM5")),
+        "# ALT-BUTTON5 = AM5",
         "",
-        "# 修饰键 + 字母/数字（示例，可改）",
+        "# 空格作为修饰键 + 鼠标（示例，最多3字符）/ Space as modifier + Mouse (examples, max 3 chars)",
+        string.format("SPACE-MOUSEWHEELUP = %s", val("SPACE-MOUSEWHEELUP", "SpU")),
+        "# SPACE-MOUSEWHEELDOWN = SpD",
+        "# SPACE-BUTTON3 = Sp3",
+        "# SPACE-BUTTON4 = Sp4",
+        "# SPACE-BUTTON5 = Sp5",
+        "",
+        "# ------------------------------------------------------------------------",
+        "# 第四部分：修饰键组合（空格与其他修饰键组合，最多3字符）",
+        "# Part 4: Modifier Combinations (Space with other modifiers, max 3 chars)",
+        "# ------------------------------------------------------------------------",
+        "# 说明 / Note: 空格可以与其他修饰键组合使用",
+        "# Space can be combined with other modifiers",
+        string.format("SHIFT-SPACE = %s", val("SHIFT-SPACE", "SSp")),
+        string.format("CTRL-SPACE = %s", val("CTRL-SPACE", "CSp")),
+        "# ALT-SPACE = ASp",
+        "",
+        "# ------------------------------------------------------------------------",
+        "# 第五部分：特殊键配置（显示较长的键名建议自定义，最多3字符）",
+        "# Part 5: Special Keys (Long key names recommended to customize, max 3 chars)",
+        "# ------------------------------------------------------------------------",
+        "# 小键盘数字（原生显示为 NumPad1 等，较长）/ Numpad numbers (native shows as NumPad1, etc., long)",
+        string.format("NUMPAD1 = %s", val("NUMPAD1", "N1")),
+        string.format("NUMPAD2 = %s", val("NUMPAD2", "N2")),
+        string.format("NUMPAD3 = %s", val("NUMPAD3", "N3")),
+        "# NUMPAD4 = N4",
+        "# NUMPAD5 = N5",
+        "# NUMPAD6 = N6",
+        "# NUMPAD7 = N7",
+        "# NUMPAD8 = N8",
+        "# NUMPAD9 = N9",
+        "# NUMPAD0 = N0",
+        "",
+        "# 方向键（可以用箭头符号或缩写）/ Arrow keys (can use arrow symbols or abbreviations)",
+        "# UP = ↑",
+        "# DOWN = ↓",
+        "# LEFT = ←",
+        "# RIGHT = →",
+        "# 或者 / Or: UP = U, DOWN = D, LEFT = L, RIGHT = R",
+        "",
+        "# 其他特殊键（建议缩写）/ Other special keys (recommend abbreviations)",
+        "# PAGEUP = PgU",
+        "# PAGEDOWN = PgD",
+        "# HOME = Hom",
+        "# END = End",
+        "# INSERT = Ins",
+        "# DELETE = Del",
+        "",
+        "# ------------------------------------------------------------------------",
+        "# 第六部分：修饰键 + 字母/数字组合（示例，最多3字符）",
+        "# Part 6: Modifier + Letter/Number Combinations (Examples, max 3 chars)",
+        "# ------------------------------------------------------------------------",
+        "# 修饰键 + 数字（示例）/ Modifier + Numbers (examples)",
         string.format("SHIFT-1 = %s", val("SHIFT-1", "S1")),
-        string.format("CTRL-2 = %s", val("CTRL-2", "C2")),
-        string.format("ALT-3 = %s", val("ALT-3", "A3")),
-        string.format("SHIFT-A = %s", val("SHIFT-A", "SA")),
-        string.format("CTRL-E = %s", val("CTRL-E", "CE")),
-        string.format("ALT-R = %s", val("ALT-R", "AR")),
+        "# SHIFT-2 = S2",
+        "# CTRL-2 = C2",
+        "# CTRL-3 = C3",
+        "# ALT-3 = A3",
+        "# ALT-4 = A4",
+        "# SPACE-1 = Sp1",
         "",
-        "# 按需继续添加 KEY = VALUE，遵守允许范围。",
+        "# 修饰键 + 字母（示例）/ Modifier + Letters (examples)",
+        string.format("CTRL-E = %s", val("CTRL-E", "CE")),
+        "# SHIFT-A = SA",
+        "# SHIFT-Q = SQ",
+        "# CTRL-W = CW",
+        "# ALT-R = AR",
+        "# ALT-F = AF",
+        "# SPACE-Q = SpQ",
+        "",
+        "# ------------------------------------------------------------------------",
+        "# 第七部分：自定义区域（在此添加你自己的配置）",
+        "# Part 7: Custom Area (Add your own configurations here)",
+        "# ------------------------------------------------------------------------",
+        "# 在这里添加你需要的其他配置... / Add your custom key mappings here...",
+        "# ⚠️  记住：显示文本最多3个字符！/ Remember: Display text max 3 characters!",
+        "",
+        "",
+        "# ========================================================================",
+        "# 支持的所有特殊键列表 / Supported Special Keys List",
+        "# ========================================================================",
+        "# 修饰键 / Modifiers:",
+        "#   SHIFT, CTRL, ALT, SPACE (空格既可单独用也可作修饰键)",
+        "#",
+        "# 空格和功能键 / Space and function keys:",
+        "#   TAB, ESCAPE, ENTER, BACKSPACE, DELETE, INSERT",
+        "#",
+        "# 导航键 / Navigation keys:",
+        "#   HOME, END, PAGEUP, PAGEDOWN",
+        "#",
+        "# 方向键 / Arrow keys:",
+        "#   UP, DOWN, LEFT, RIGHT",
+        "#",
+        "# 小键盘 / Numpad:",
+        "#   NUMPAD0-9, NUMPADMULTIPLY(*), NUMPADDIVIDE(/),",
+        "#   NUMPADPLUS(+), NUMPADMINUS(-), NUMPADDECIMAL(.)",
+        "#",
+        "# ⚠️  重要提示 / Important:",
+        "#   所有显示文本建议不超过3个字符，否则会显示成点！",
+        "#   All display text should not exceed 3 characters, or it will show as dots!",
+        "# ========================================================================",
     }
     return table.concat(lines, "\n")
 end
@@ -308,6 +437,7 @@ local function GetDisplayText(bindingKey)
         return keyMappings[key]
     end
     
+    -- 单独的字母、数字、功能键不允许自定义（显示原生）
     if string.match(key, "^[A-Z]$") or
        string.match(key, "^[0-9]$") or
        string.match(key, "^F[0-9]+$") then
@@ -357,6 +487,7 @@ local function GetDisplayText(bindingKey)
         hasModifier = true
     end
     
+    -- 检查鼠标键
     if key == "MOUSEWHEELUP" then
         local mouseText = keyMappings["MOUSEWHEELUP"]
         if mouseText then
@@ -396,11 +527,44 @@ local function GetDisplayText(bindingKey)
             hasConfig = true
         end
     else
-        if not hasModifier then
-            return nil
+        -- 检查是否为特殊键（允许单独配置）
+        local specialKeys = {
+            "SPACE", "TAB", "ESCAPE", "ENTER", "BACKSPACE", "DELETE", "INSERT",
+            "HOME", "END", "PAGEUP", "PAGEDOWN",
+            "UP", "DOWN", "LEFT", "RIGHT",
+            "NUMPAD0", "NUMPAD1", "NUMPAD2", "NUMPAD3", "NUMPAD4",
+            "NUMPAD5", "NUMPAD6", "NUMPAD7", "NUMPAD8", "NUMPAD9",
+            "NUMPADMULTIPLY", "NUMPADDIVIDE", "NUMPADPLUS", "NUMPADMINUS", "NUMPADDECIMAL",
+            "BACKQUOTE", "MINUS", "EQUALS", "LEFTBRACKET", "RIGHTBRACKET",
+            "BACKSLASH", "SEMICOLON", "APOSTROPHE", "COMMA", "PERIOD", "SLASH",
+        }
+        
+        local isSpecialKey = false
+        for _, specialKey in ipairs(specialKeys) do
+            if key == specialKey then
+                isSpecialKey = true
+                break
+            end
         end
-        if key and key ~= "" then
-            result = result .. key
+        
+        if isSpecialKey then
+            -- 特殊键：检查是否有配置
+            local specialText = keyMappings[key]
+            if specialText then
+                result = result .. specialText
+                hasConfig = true
+            elseif not hasModifier then
+                -- 没有修饰键且没有配置，返回nil使用原生显示
+                return nil
+            end
+        elseif not hasModifier then
+            -- 其他键没有修饰键，不允许自定义
+            return nil
+        else
+            -- 有修饰键的组合，将剩余按键添加到结果中
+            if key and key ~= "" then
+                result = result .. key
+            end
         end
     end
     
