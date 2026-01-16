@@ -122,6 +122,7 @@ local function BuildTemplateText(defaults)
         "# ========================================================================",
         "# 插件更新：https://www.curseforge.com/wow/addons/customactionbuttontext",
         "# 快捷键：Ctrl+S 保存 | Ctrl+Z 撤销 | Ctrl+Y 重做 | ESC 取消焦点",
+        "# 重置命令：/cabt reset 恢复默认配置",
         "# 提示：显示文本建议不超过3个字符，超过可能显示成点",
         "# ========================================================================",
         "",
