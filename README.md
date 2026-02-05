@@ -13,17 +13,17 @@
 
 ### ⚠️ 重要限制
 - **3字符限制**：游戏引擎限制热键文本最多3个字符，超过会显示成点
-- 建议配置：修饰键单字符（S, C, A），组合键不超过3字符（SMU, CM3）
+- 建议配置：修饰键使用单字符+连字符（S-, C-, A-），组合键不超过3字符（SMU, CM3）
 
 ## 使用方法 / Usage
 
 ### 基本操作
 - **打开编辑器**：`/cabt`（打开即可编辑，注释显示为灰色）
-- **保存配置**：按 `Ctrl+S` 校验并保存
+- **保存配置**：按 `Ctrl+S` 保存（允许格式错误，插件会忽略无效行）
 - **关闭焦点**：按 `ESC` 取消输入焦点
 - **撤销/重做**：`Ctrl+Z` 撤销，`Ctrl+Y` 重做
-- **调试信息**：`/cabt debug` 查看映射数量、回退统计等
-- **重置配置**：`/cabt reset` 恢复默认模板并应用
+- **调试信息**：`/cabt debug` 查看映射数量与原始热键缓存
+- **重置配置**：`/cabt reset` 清除本地配置并恢复默认模板
 
 ### 编辑器快捷键
 - `Ctrl+S` - 保存并应用配置
@@ -34,22 +34,13 @@
 
 ## 配置规则 / Configuration Rules
 
-### ✅ 允许自定义 / Allowed
-- **修饰键**：SHIFT, CTRL, ALT
-- **空格键**：SPACE（可单独使用或被修饰，如 SHIFT-SPACE）
-- **鼠标键**：滚轮、中键、侧键（MOUSEWHEELUP, BUTTON3-5）
-- **特殊键**：方向键、小键盘、导航键等（显示较长的键名）
-- **组合键**：单个修饰键+其他键（SHIFT-A, CTRL-1）
-
-### ❌ 不允许自定义 / Not Allowed
-- **单独的字母/数字/F键**：A, 1, F1（原生显示已经很短）
-- **多重修饰键**：CTRL-SHIFT-T（不支持）
-- **空格作为修饰键**：SPACE-MOUSEWHEELUP（游戏不支持）
-
-### 优先级说明 / Priority
-1. **精确匹配**：SHIFT-MOUSEWHEELUP = SMU
-2. **自动拼接**：SHIFT + MOUSEWHEELUP = S + MU = SMU
-3. **原生显示**：未配置的键使用游戏原生文本
+### ✅ 解析规则 / Rules
+- 仅解析 `KEY = VALUE` 或空格分隔形式，KEY 会被转为大写
+- **不做合法性校验**，任意组合键/特殊键都可配置，是否生效由游戏决定
+- **组合键精确匹配优先**（如 `SHIFT-MOUSEWHEELUP = SMU`）
+- 若无精确匹配，自动拼接：修饰键映射 + 基础键映射（基础键无映射则使用原始基础键）
+- 重复键以最后一条为准
+- 未配置的按键使用游戏原生显示
 
 ## 文本格式 / Format
 
@@ -61,50 +52,47 @@
 ### 配置示例 / Example
 
 ```
-# 修饰键（建议单字符）
-SHIFT = S
-CTRL = C
-ALT = A
-SPACE = Sp
+# 修饰键（建议单字符+连字符）
+SHIFT = S-
+CTRL = C-
+ALT = A-
 
-# 鼠标键（建议2字符）
+# 鼠标键
 MOUSEWHEELUP = MU
 MOUSEWHEELDOWN = MD
 BUTTON3 = M3
 BUTTON4 = M4
 BUTTON5 = M5
 
-# 修饰键 + 鼠标组合（最多3字符）
+# 其他按键
+SPACE = Sp
+
+# 组合键（精确匹配优先）
 SHIFT-MOUSEWHEELUP = SMU
-CTRL-BUTTON3 = CM3
-ALT-BUTTON4 = AM4
-
-# 修饰键 + 空格（最多3字符）
-SHIFT-SPACE = SSp
+SHIFT-MOUSEWHEELDOWN = SMD
 CTRL-SPACE = CSp
-
-# 特殊键（最多3字符）
-NUMPAD1 = N1
-NUMPAD2 = N2
-NUMPAD3 = N3
-
-# 修饰键 + 字母/数字（最多3字符）
-SHIFT-1 = S1
-CTRL-E = CE
+ALT-MOUSEWHEELUP = AMU
+SHIFT-BUTTON4 = SM4
 ```
 
 ## 命令 / Commands
 
 - `/cabt` - 打开编辑器
 - `/cabt debug` 或 `/cabt d` - 打印调试信息
-- `/cabt reset` 或 `/cabt r` - 恢复默认模板并立即应用
+- `/cabt reset` 或 `/cabt r` - 清除本地配置并恢复默认模板
 
 ## 技术说明 / Technical Notes
 
 - 配置写入 SavedVariables，重载/重登后保留原样（含注释与格式）
 - 只改动作条热键显示文本，不改游戏按键绑定或数据
-- 重复键以最后一条为准；保存时若有非法行会拒绝保存并提示
-- 支持所有 WoW 原生支持的快捷键组合
+- 不校验组合键合法性，是否生效由游戏处理
+- 组合键精确匹配优先，其次自动拼接（基础键无映射则使用原始基础键）
+- 保存时仅提示格式问题（如缺少 VALUE），不会阻止保存
+- 保存时**原样保存**编辑器内容（含注释与空行），不管是否有错误或空内容
+- 插件解析到有效映射才会应用；若无有效映射则忽略，不改变当前生效映射
+- 未保存过配置时，编辑器显示默认模板；保存后显示用户本地配置（允许空配置）
+- `/cabt reset` 会清除本地配置并恢复默认模板（需再次保存才会写入本地）
+- 版本更新后建议运行 `/cabt reset` 清空本地配置避免异常
 
 ## 更新日志 / Changelog
 

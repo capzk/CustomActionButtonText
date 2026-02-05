@@ -2,15 +2,6 @@
 
 local Data = _G.CustomActionButtonText_Data
 
-local function BuildSortedList(mappings)
-    local list = {}
-    for k, v in pairs(mappings or {}) do
-        table.insert(list, {key = k, value = v})
-    end
-    table.sort(list, function(a, b) return a.key < b.key end)
-    return list
-end
-
 local function ShallowCopy(tbl)
     local t = {}
     for k, v in pairs(tbl or {}) do
@@ -23,50 +14,54 @@ local function SerializeMappings(mappings)
     if Data and Data.SerializeMappings then
         return Data.SerializeMappings(mappings)
     end
-    local lines = {}
-    for _, entry in ipairs(BuildSortedList(mappings)) do
-        lines[#lines + 1] = string.format("%s = %s", entry.key, entry.value)
-    end
-    return table.concat(lines, "\n")
+    -- 如果Data模块不可用，返回空字符串
+    return ""
 end
 
 local function ParseMappings(text, validateFn)
     if Data and Data.ParseText then
         return Data.ParseText(text)
     end
-    local parsed = {}
-    local validCount = 0
-    local invalidCount = 0
+    -- 如果Data模块不可用，返回空结果
+    return {}, 0, 1
+end
 
-    for line in string.gmatch(text or "", "[^\r\n]+") do
-        local trimmed = string.match(line, "^%s*(.-)%s*$")
-        if trimmed ~= "" then
-            local keyPart, valuePart = string.match(trimmed, "^(.-)%s*=%s*(.+)$")
-            if not keyPart then
-                keyPart, valuePart = string.match(trimmed, "^(%S+)%s+(.+)$")
+local function SplitLinesPreserveEmpty(text)
+    local lines = {}
+    local start = 1
+    local len = string.len(text or "")
+    if len == 0 then
+        return { "" }
+    end
+    while true do
+        local pos = string.find(text, "\n", start, true)
+        if not pos then
+            local line = string.sub(text, start)
+            if string.sub(line, -1) == "\r" then
+                line = string.sub(line, 1, -2)
             end
-            if keyPart and valuePart then
-                local nKey, nVal = validateFn and validateFn(keyPart, valuePart)
-                if nKey then
-                    parsed[nKey] = nVal
-                    validCount = validCount + 1
-                else
-                    invalidCount = invalidCount + 1
-                end
-            else
-                invalidCount = invalidCount + 1
-            end
+            table.insert(lines, line)
+            break
+        end
+        local line = string.sub(text, start, pos - 1)
+        if string.sub(line, -1) == "\r" then
+            line = string.sub(line, 1, -2)
+        end
+        table.insert(lines, line)
+        start = pos + 1
+        if start > len then
+            table.insert(lines, "")
+            break
         end
     end
-
-    return parsed, validCount, invalidCount
+    return lines
 end
 
 local function ApplyCommentColoring(text)
-    if not text or text == "" then return text end
+    if text == nil then return "" end
     local lines = {}
-    for line in string.gmatch(text, "[^\r\n]+") do
-        local trimmed = string.match(line, "^%s*(.-)%s*$")
+    for _, line in ipairs(SplitLinesPreserveEmpty(text)) do
+        local trimmed = string.match(line, "^%s*(.-)%s*$") or ""
         if trimmed:match("^#") or trimmed:match("^//") or trimmed:match("^%-%-") then
             table.insert(lines, "|cff969696" .. line .. "|r")
         else
@@ -102,7 +97,6 @@ function CustomActionButtonText_ShowUI(api)
         uiFrame.TitleText:SetText("Custom Action Button Text")
 
         local padding = 12
-        local editorWidth = uiFrame:GetWidth() - padding * 2
 
         local editorFrame = CreateFrame("ScrollFrame", nil, uiFrame, "InputScrollFrameTemplate")
         editorFrame:SetPoint("TOPLEFT", padding, -32)
@@ -110,9 +104,9 @@ function CustomActionButtonText_ShowUI(api)
         uiFrame.editorFrame = editorFrame
         editorFrame.CharCount:Hide()
         editorFrame.EditBox:SetFontObject("GameFontHighlight")
-        editorFrame.EditBox:SetWidth(editorWidth - 30)
+        editorFrame.EditBox:SetWidth(720 - padding * 2 - 20)  -- 固定宽度：窗口宽度 - 边距 - 滚动条
         editorFrame.EditBox:SetAutoFocus(false)
-        editorFrame.EditBox:SetSpacing(6)
+        -- 不设置固定的Spacing，让它自动适应字体大小
         editorFrame.EditBox:SetPropagateKeyboardInput(false)
         editorFrame.EditBox:SetAltArrowKeyMode(false)
         editorFrame.EditBox:SetMaxLetters(0)
@@ -140,7 +134,7 @@ function CustomActionButtonText_ShowUI(api)
 
         local function GetInitialMappings()
             local savedText = api.GetSavedRawText and api.GetSavedRawText()
-            if savedText and savedText ~= "" then
+            if savedText ~= nil then
                 return savedText
             end
             local saved = api.GetSavedMappings and api.GetSavedMappings()
@@ -156,7 +150,7 @@ function CustomActionButtonText_ShowUI(api)
 
         local function LoadToEditor()
             local text = uiFrame.state.rawText
-            if not text or text == "" then
+            if text == nil then
                 text = GetInitialMappings()
                 uiFrame.state.rawText = text
             end
@@ -176,24 +170,28 @@ function CustomActionButtonText_ShowUI(api)
             if ctrl and key == "S" then
                 local rawText = StripColorCodes(editorFrame.EditBox:GetText())
                 local parsed, ok, bad, reasons = ParseMappings(rawText, api.ValidateEntry)
-                if ok == 0 then
-                    print("CustomActionButtonText: 保存失败，编辑器没有任何有效行（请检查格式：KEY = VALUE，半角符号）。")
-                    return
-                end
                 if bad > 0 then
-                    print(string.format("CustomActionButtonText: 保存失败，发现 %d 条无效行，成功解析 %d 条。", bad, ok))
+                    print(string.format("CustomActionButtonText: 警告：发现 %d 条格式无效行，成功解析 %d 条。", bad, ok))
                     if reasons and reasons[1] then
                         print("示例无效行：" .. reasons[1])
                     end
-                    return
                 end
-                local applied, reason = api.ApplyMappings(parsed, {persist = true, source = "UI", trusted = true, silent = true, rawText = rawText, templateVersion = api.TemplateVersion})
-                if applied ~= false then
-                    uiFrame.state.mappings = ShallowCopy(parsed)
-                    uiFrame.state.rawText = rawText
-                    print(string.format("CustomActionButtonText: 已应用并保存 %d 条映射。", ok))
+                if ok > 0 then
+                    local applied, reason = api.ApplyMappings(parsed, {persist = true, source = "UI", trusted = true, silent = true, rawText = rawText, templateVersion = api.TemplateVersion})
+                    if applied ~= false then
+                        uiFrame.state.mappings = ShallowCopy(parsed)
+                        uiFrame.state.rawText = rawText
+                        print(string.format("CustomActionButtonText: 已应用并保存 %d 条映射。", ok))
+                    else
+                        print("CustomActionButtonText: 保存失败，原因：" .. tostring(reason or "未知"))
+                    end
                 else
-                    print("CustomActionButtonText: 保存失败，原因：" .. tostring(reason or "未知"))
+                    if api.SaveRawText then
+                        api.SaveRawText(rawText, api.TemplateVersion)
+                    end
+                    uiFrame.state.mappings = {}
+                    uiFrame.state.rawText = rawText
+                    print("CustomActionButtonText: 已保存配置，但无有效映射，未应用。")
                 end
                 return
             end

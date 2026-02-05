@@ -59,6 +59,11 @@ local function UpdateButton(button)
     local buttonName = button:GetName()
     if not buttonName then return false end
 
+    -- 12.0兼容性：在战斗中跳过更新以避免保护错误
+    if InCombatLockdown() then
+        return false
+    end
+
     local bindingKey = ResolveBindingKey(button)
     if bindingKey then
         local label = getDisplayText(bindingKey)
@@ -66,16 +71,27 @@ local function UpdateButton(button)
             if not originalHotkeys[buttonName] then
                 originalHotkeys[buttonName] = button.HotKey:GetText()
             end
-            button.HotKey:SetText(label)
+            -- 使用pcall保护SetText调用，防止12.0的secret values错误
+            local success, err = pcall(function()
+                button.HotKey:SetText(label)
+            end)
+            if not success then
+                -- 如果SetText失败，记录但不中断执行
+                return false
+            end
             return true
         else
             if originalHotkeys[buttonName] then
-                button.HotKey:SetText(originalHotkeys[buttonName])
+                local success, err = pcall(function()
+                    button.HotKey:SetText(originalHotkeys[buttonName])
+                end)
             end
         end
     else
         if originalHotkeys[buttonName] then
-            button.HotKey:SetText(originalHotkeys[buttonName])
+            local success, err = pcall(function()
+                button.HotKey:SetText(originalHotkeys[buttonName])
+            end)
         end
     end
 
@@ -145,6 +161,11 @@ function Hotkeys.HookActionButtonUpdate()
 end
 
 function Hotkeys.ResetAllButtons()
+    -- 12.0兼容性：在战斗中不执行重置操作
+    if InCombatLockdown() then
+        return
+    end
+
     local buttonSets = {
         {prefix = "ActionButton", count = 12},
         {prefix = "MultiBarBottomLeftButton", count = 12},
@@ -169,12 +190,18 @@ function Hotkeys.ResetAllButtons()
                     local k1, k2 = GetBindingKey(bindingName)
                     local key = k1 or k2
                     if key then
-                        button.HotKey:SetText(GetBindingText(key, "KEY_", 1))
+                        pcall(function()
+                            button.HotKey:SetText(GetBindingText(key, "KEY_", 1))
+                        end)
                     else
-                        button.HotKey:SetText("")
+                        pcall(function()
+                            button.HotKey:SetText("")
+                        end)
                     end
                 else
-                    button.HotKey:SetText("")
+                    pcall(function()
+                        button.HotKey:SetText("")
+                    end)
                 end
             end
         end
@@ -186,9 +213,13 @@ function Hotkeys.ResetAllButtons()
         local k1, k2 = GetBindingKey(bindingName)
         local key = k1 or k2
         if key then
-            extraButton.HotKey:SetText(GetBindingText(key, "KEY_", 1))
+            pcall(function()
+                extraButton.HotKey:SetText(GetBindingText(key, "KEY_", 1))
+            end)
         else
-            extraButton.HotKey:SetText("")
+            pcall(function()
+                extraButton.HotKey:SetText("")
+            end)
         end
     end
 end
